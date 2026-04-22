@@ -230,68 +230,83 @@ export function BookReader({
 
             return (
               <div key={node.id} className="w-full">
-                <NodeCard
-                  node={node}
-                  isRoot={isRoot}
-                  onClick={
-                    !isLeaf && !isBranchInputOpen
-                      ? () => {
-                          setBranchOpen(null);
-                          setLeaf(node.id);
+                {openDirection === "sibling" ? (
+                  // 형제로 쓰는 중: 현재 카드는 작게 미리보기, 같은 레벨에서 새 카드 쓰는 느낌
+                  <div className="mb-2 flex flex-col items-center gap-2">
+                    <div className="w-full max-w-[260px] scale-95 opacity-80">
+                      <NodeCard node={node} variant="peek" />
+                    </div>
+                    <div className="flex items-center gap-2 font-script text-[11px] italic text-verdigris">
+                      <span className="h-px w-10 bg-verdigris/40" />
+                      <span>→ 이 카드와 같은 지점에 형제 갈래</span>
+                      <span className="h-px w-10 bg-verdigris/40" />
+                    </div>
+                    <div className="w-full max-w-xl">
+                      <ChatInput
+                        label={`${currentUser} · 같은 부모 밑에 새 갈래 쓰는 중`}
+                        autoFocus
+                        compact
+                        submitLabel="→ 옆으로 쓰기"
+                        onSubmit={(text) =>
+                          submitNode(node.parentId!, text)
                         }
-                      : undefined
-                  }
-                  onStartChild={
-                    node.isEnding
-                      ? undefined
-                      : () =>
-                          setBranchOpen((prev) =>
-                            prev?.nodeId === node.id &&
-                            prev.direction === "child"
-                              ? null
-                              : { nodeId: node.id, direction: "child" },
-                          )
-                  }
-                  onStartSibling={
-                    node.isEnding || !node.parentId
-                      ? undefined
-                      : () =>
-                          setBranchOpen((prev) =>
-                            prev?.nodeId === node.id &&
-                            prev.direction === "sibling"
-                              ? null
-                              : { nodeId: node.id, direction: "sibling" },
-                          )
-                  }
-                  canSibling={!!node.parentId}
-                  canDelete={canDelete}
-                  onDelete={canDelete ? () => deleteNode(node.id) : undefined}
-                  openDirection={openDirection}
-                />
+                        onCancel={() => setBranchOpen(null)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <NodeCard
+                    node={node}
+                    isRoot={isRoot}
+                    onClick={
+                      !isLeaf && !isBranchInputOpen
+                        ? () => {
+                            setBranchOpen(null);
+                            setLeaf(node.id);
+                          }
+                        : undefined
+                    }
+                    onStartChild={
+                      node.isEnding
+                        ? undefined
+                        : () =>
+                            setBranchOpen((prev) =>
+                              prev?.nodeId === node.id &&
+                              prev.direction === "child"
+                                ? null
+                                : { nodeId: node.id, direction: "child" },
+                            )
+                    }
+                    onStartSibling={
+                      node.isEnding || !node.parentId
+                        ? undefined
+                        : () =>
+                            setBranchOpen((prev) =>
+                              prev?.nodeId === node.id &&
+                              prev.direction === "sibling"
+                                ? null
+                                : { nodeId: node.id, direction: "sibling" },
+                            )
+                    }
+                    canSibling={!!node.parentId}
+                    canDelete={canDelete}
+                    onDelete={
+                      canDelete ? () => deleteNode(node.id) : undefined
+                    }
+                    openDirection={openDirection}
+                  />
+                )}
 
-                {/* 인라인 입력창 — 방향 고정 */}
-                {isBranchInputOpen && (
+                {/* 자식(↓) 방향 입력창 — 현재 카드 아래에 잉크 선 + 입력 */}
+                {openDirection === "child" && (
                   <div className="my-3">
                     <InkLine active />
                     <ChatInput
-                      label={
-                        openDirection === "child"
-                          ? `${currentUser} · 이 카드 ↓ 뒤에 잇기`
-                          : `${currentUser} · 이 카드 → 옆에 새 갈래`
-                      }
+                      label={`${currentUser} · 이 카드 ↓ 뒤에 잇기`}
                       autoFocus
                       compact
-                      submitLabel={
-                        openDirection === "child" ? "↓ 잇다" : "→ 옆으로"
-                      }
-                      onSubmit={(text) =>
-                        submitNode(
-                          openDirection === "sibling"
-                            ? node.parentId!
-                            : node.id,
-                          text,
-                        )
-                      }
+                      submitLabel="↓ 잇다"
+                      onSubmit={(text) => submitNode(node.id, text)}
                       onCancel={() => setBranchOpen(null)}
                     />
                   </div>
