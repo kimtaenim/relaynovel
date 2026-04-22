@@ -38,8 +38,9 @@ export default function AboutPage() {
               2. 14년 전의 제안, 지금의 구현
             </h2>
             <p className="handwritten leading-loose text-ink">
-              논문에는 세 명의 스토리텔링 전문가가 평가자로 참여했습니다. 그중 한
-              평가자는 매우 긍정적인 평가를 남기면서도 세 가지 제안을 덧붙였습니다.
+              논문에는 세 명의 스토리텔링 전문가가 평가자로 참여했습니다. 그중
+              평가자 <strong>김태권</strong>은 매우 긍정적인 평가를 남기면서도 세
+              가지 제안을 덧붙였습니다.
             </p>
             <ul className="mt-2 list-disc space-y-1 pl-5 handwritten text-ink">
               <li>전체 스토리를 조망할 수 있는 맵 같은 내비게이션</li>
