@@ -4,7 +4,6 @@ import { getBook } from "@/lib/books";
 import { redis, keys } from "@/lib/redis";
 import type { Book, NodeStatus } from "@/lib/types";
 
-// PATCH — 노드 상태 변경 (shadow → active 채택, 또는 active → shadow 취소 등)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { nodeId: string } },
@@ -44,12 +43,36 @@ export async function PATCH(
       return NextResponse.json({ error: "없는 노드" }, { status: 404 });
     }
 
-    // 삭제는 시삽만
-    if (newStatus === "deleted" && !isMaster) {
-      return NextResponse.json(
-        { error: "삭제는 시삽만 가능합니다." },
-        { status: 403 },
+    if (newStatus === "deleted") {
+      // 루트는 삭제 불가
+      if (!node.parentId) {
+        return NextResponse.json(
+          { error: "첫 토막은 삭제할 수 없습니다." },
+          { status: 400 },
+        );
+      }
+      // 작성자 본인, AI인 경우 호출자, 또는 시삽만 삭제 가능
+      const isAuthor = node.author === session.nickname;
+      const isInvoker = !!node.adoptedBy && node.adoptedBy === session.nickname;
+      if (!isMaster && !isAuthor && !isInvoker) {
+        return NextResponse.json(
+          { error: "본인이 쓴(또는 부른) 토막만 삭제할 수 있습니다." },
+          { status: 403 },
+        );
+      }
+      // 활성 자식이 있으면 차단 (갈래 고아화 방지)
+      const hasActiveChildren = node.childrenIds.some(
+        (cid) => book.nodes[cid]?.status === "active",
       );
+      if (hasActiveChildren) {
+        return NextResponse.json(
+          {
+            error:
+              "이 토막 밑에 이어진 토막이 있어 삭제할 수 없습니다. 아래 토막부터 정리해주세요.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const updatedNode = {

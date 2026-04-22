@@ -40,7 +40,10 @@ export function BookReader({
     [book, resolvedLeafId],
   );
 
-  const [branchOpenAt, setBranchOpenAt] = useState<string | null>(null);
+  // 어느 노드에서 어느 방향으로 입력창을 여는지
+  const [branchOpen, setBranchOpen] = useState<
+    { nodeId: string; direction: "child" | "sibling" } | null
+  >(null);
   const [lastSync, setLastSync] = useState<number>(Date.now());
 
   // 다른 참여자가 쓴 글을 받아오기 위한 폴링 + 탭 포커스 시 갱신
@@ -119,6 +122,30 @@ export function BookReader({
     [book, router, searchParams],
   );
 
+  async function deleteNode(nodeId: string) {
+    const res = await fetch(`/api/nodes/${nodeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookId: book.id, status: "deleted" }),
+    });
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      alert(b.error ?? "삭제 실패");
+      return;
+    }
+    // 삭제된 노드가 현재 리프였으면 부모로 이동
+    if (nodeId === resolvedLeafId) {
+      const parent = book.nodes[nodeId]?.parentId;
+      if (parent) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("leaf", parent);
+        params.delete("focus");
+        router.replace(`?${params.toString()}`, { scroll: false });
+      }
+    }
+    router.refresh();
+  }
+
   async function submitNode(parentId: string, text: string) {
     const res = await fetch("/api/nodes", {
       method: "POST",
@@ -130,7 +157,7 @@ export function BookReader({
       throw new Error(b.error ?? "전송 실패");
     }
     const data = (await res.json()) as { nodeId: string };
-    setBranchOpenAt(null);
+    setBranchOpen(null);
     const params = new URLSearchParams(searchParams.toString());
     params.set("leaf", data.nodeId);
     params.delete("focus");
@@ -179,7 +206,19 @@ export function BookReader({
           {path.map((node, idx) => {
             const isRoot = idx === 0;
             const isLeaf = idx === path.length - 1;
-            const isBranchInputOpen = branchOpenAt === node.id;
+            const openDirection =
+              branchOpen?.nodeId === node.id ? branchOpen.direction : null;
+            const isBranchInputOpen = openDirection !== null;
+            const isAuthor = node.author === currentUser;
+            const isInvoker =
+              !!node.adoptedBy && node.adoptedBy === currentUser;
+            const hasActiveChildren = node.childrenIds.some(
+              (cid) => book.nodes[cid]?.status === "active",
+            );
+            const canDelete =
+              !!node.parentId && // 루트 삭제 불가
+              !hasActiveChildren && // 자식 있으면 불가
+              (isAuthor || isInvoker); // 본인/호출자만 (시삽은 서버에서 허용)
             const selectedChildId = selectedChildOf(
               book,
               node.id,
@@ -195,39 +234,65 @@ export function BookReader({
                   node={node}
                   isRoot={isRoot}
                   onClick={
-                    !isLeaf
+                    !isLeaf && !isBranchInputOpen
                       ? () => {
-                          setBranchOpenAt(null);
+                          setBranchOpen(null);
                           setLeaf(node.id);
                         }
                       : undefined
                   }
-                  onStartBranch={
+                  onStartChild={
                     node.isEnding
                       ? undefined
                       : () =>
-                          setBranchOpenAt((prev) =>
-                            prev === node.id ? null : node.id,
+                          setBranchOpen((prev) =>
+                            prev?.nodeId === node.id &&
+                            prev.direction === "child"
+                              ? null
+                              : { nodeId: node.id, direction: "child" },
                           )
                   }
-                  branchInputOpen={isBranchInputOpen}
+                  onStartSibling={
+                    node.isEnding || !node.parentId
+                      ? undefined
+                      : () =>
+                          setBranchOpen((prev) =>
+                            prev?.nodeId === node.id &&
+                            prev.direction === "sibling"
+                              ? null
+                              : { nodeId: node.id, direction: "sibling" },
+                          )
+                  }
+                  canSibling={!!node.parentId}
+                  canDelete={canDelete}
+                  onDelete={canDelete ? () => deleteNode(node.id) : undefined}
+                  openDirection={openDirection}
                 />
 
-                {/* 인라인 이어쓰기 */}
+                {/* 인라인 입력창 — 방향 고정 */}
                 {isBranchInputOpen && (
                   <div className="my-3">
                     <InkLine active />
                     <ChatInput
-                      label={`${currentUser} · ↓ 이 뒤에  ·  → 이 카드 옆에`}
+                      label={
+                        openDirection === "child"
+                          ? `${currentUser} · 이 카드 ↓ 뒤에 잇기`
+                          : `${currentUser} · 이 카드 → 옆에 새 갈래`
+                      }
                       autoFocus
                       compact
-                      onSubmit={(text) => submitNode(node.id, text)}
-                      onSubmitSibling={
-                        node.parentId
-                          ? (text) => submitNode(node.parentId!, text)
-                          : undefined
+                      submitLabel={
+                        openDirection === "child" ? "↓ 잇다" : "→ 옆으로"
                       }
-                      onCancel={() => setBranchOpenAt(null)}
+                      onSubmit={(text) =>
+                        submitNode(
+                          openDirection === "sibling"
+                            ? node.parentId!
+                            : node.id,
+                          text,
+                        )
+                      }
+                      onCancel={() => setBranchOpen(null)}
                     />
                   </div>
                 )}
@@ -241,7 +306,7 @@ export function BookReader({
                       branchNode={node}
                       selectedChildId={selectedChildId}
                       onChoose={(id) => {
-                        setBranchOpenAt(null);
+                        setBranchOpen(null);
                         setLeaf(id);
                       }}
                     />
@@ -275,32 +340,52 @@ export function BookReader({
         </div>
       </article>
 
-      {/* 바닥 고정 입력창 + 아르케타입 바 */}
-      {!leafNode?.isEnding && !branchOpenAt && !aiPanel && (
+      {/* 바닥 고정 영역 — 아르케타입 바 + 방향 시작 버튼 */}
+      {!leafNode?.isEnding && !branchOpen && !aiPanel && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-leather/40 bg-mahogany/92 px-3 pb-[env(safe-area-inset-bottom,0.5rem)] pt-2 backdrop-blur-sm sm:px-4 sm:pt-3">
-          <div className="mx-auto max-w-3xl">
-            <div className="mb-2">
-              <ArchetypeBar
-                enabled={book.archetypesEnabled}
-                onInvoke={(k) => invokeArchetype(k, resolvedLeafId)}
-                busy={aiBusy}
-                busyKey={aiBusyKey}
-              />
-            </div>
+          <div className="mx-auto flex max-w-3xl flex-col gap-2">
+            <ArchetypeBar
+              enabled={book.archetypesEnabled}
+              onInvoke={(k) => invokeArchetype(k, resolvedLeafId)}
+              busy={aiBusy}
+              busyKey={aiBusyKey}
+            />
             {aiError && (
-              <p className="mb-1 font-script text-[10px] italic text-seal/80">
+              <p className="font-script text-[10px] italic text-seal/80">
                 {aiError}
               </p>
             )}
-            <ChatInput
-              label={`${currentUser} · ↓ 뒤로 잇기  ·  → 옆에 새 갈래`}
-              onSubmit={(text) => submitNode(resolvedLeafId, text)}
-              onSubmitSibling={
-                leafNode?.parentId
-                  ? (text) => submitNode(leafNode.parentId!, text)
-                  : undefined
-              }
-            />
+            <div className="flex items-center gap-2 pb-1">
+              <span className="font-script text-[10px] italic text-parchment-light/60">
+                직접 쓰기:
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setBranchOpen({
+                    nodeId: resolvedLeafId,
+                    direction: "child",
+                  })
+                }
+                className="flex-1 rounded-full border border-seal/50 bg-seal/20 px-3 py-2 font-display text-xs tracking-wider text-parchment-light shadow-sm hover:bg-seal/40"
+              >
+                ↓ 이 뒤에 잇기
+              </button>
+              {leafNode?.parentId && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setBranchOpen({
+                      nodeId: resolvedLeafId,
+                      direction: "sibling",
+                    })
+                  }
+                  className="flex-1 rounded-full border border-verdigris/50 bg-verdigris/15 px-3 py-2 font-display text-xs tracking-wider text-parchment-light shadow-sm hover:bg-verdigris/30"
+                >
+                  → 옆에 새 갈래
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

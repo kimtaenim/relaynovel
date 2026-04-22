@@ -7,15 +7,23 @@ export function NodeCard({
   variant = "main",
   isRoot = false,
   onClick,
-  onStartBranch,
-  branchInputOpen = false,
+  onStartChild,
+  onStartSibling,
+  canSibling = true,
+  onDelete,
+  canDelete = false,
+  openDirection = null,
 }: {
   node: Node;
   variant?: "main" | "peek";
   isRoot?: boolean;
   onClick?: () => void;
-  onStartBranch?: () => void;
-  branchInputOpen?: boolean;
+  onStartChild?: () => void; // ↓ 아래로 잇기 열기
+  onStartSibling?: () => void; // → 옆에 갈래 열기
+  canSibling?: boolean; // 루트는 false
+  onDelete?: () => void;
+  canDelete?: boolean;
+  openDirection?: "child" | "sibling" | null; // 어느 방향 입력창이 열려있는지
 }) {
   const isPeek = variant === "peek";
   const isAI = node.authorType === "ai";
@@ -25,7 +33,6 @@ export function NodeCard({
       onClick={onClick}
       className={[
         "relative mx-auto rounded-2xl border shadow-sm transition",
-        // AI 노드는 양피지에 약간 다른 톤으로 — champagne 느낌의 옅은 테두리
         isPeek
           ? isAI
             ? "max-w-[160px] border-champagne/40 bg-parchment-light/55 px-3 py-2 cursor-pointer opacity-80 active:bg-parchment-light/80 hover:opacity-100"
@@ -53,6 +60,8 @@ export function NodeCard({
       >
         {node.text}
       </p>
+
+      {/* 저자 배지 + 액션 버튼 */}
       <div
         className={[
           "mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] italic",
@@ -70,20 +79,80 @@ export function NodeCard({
         {!isPeek && node.isEnding && (
           <span className="text-seal/80">· 종결</span>
         )}
-        {!isPeek && !node.isEnding && onStartBranch && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onStartBranch();
-            }}
-            className="text-ink-faded/80 underline decoration-dotted underline-offset-2 hover:text-ink"
-          >
-            {branchInputOpen ? "접기" : "+ 잇기"}
-          </button>
+
+        {/* 액션 버튼들 — 방향별 잇기 + 삭제 */}
+        {!isPeek && !node.isEnding && (
+          <div className="flex items-center gap-1">
+            {canSibling && onStartSibling && (
+              <IconButton
+                active={openDirection === "sibling"}
+                title="이 카드와 같은 지점의 다른 갈래로 쓰기 (형제)"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartSibling();
+                }}
+                label="→"
+              />
+            )}
+            {onStartChild && (
+              <IconButton
+                active={openDirection === "child"}
+                title="이 카드 뒤에 이어쓰기 (자식)"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartChild();
+                }}
+                label="↓"
+              />
+            )}
+            {canDelete && onDelete && (
+              <IconButton
+                variant="danger"
+                title="이 토막 삭제 (본인/호출자만, 자식 없을 때)"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (
+                    confirm("이 토막을 삭제할까요? 취소할 수 없습니다.")
+                  )
+                    onDelete();
+                }}
+                label="🗑"
+              />
+            )}
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+function IconButton({
+  label,
+  onClick,
+  active = false,
+  title,
+  variant = "normal",
+}: {
+  label: string;
+  onClick: (e: React.MouseEvent) => void;
+  active?: boolean;
+  title?: string;
+  variant?: "normal" | "danger";
+}) {
+  const classes = active
+    ? "border-seal/70 bg-seal/10 text-ink"
+    : variant === "danger"
+      ? "border-leather/20 bg-transparent text-ink-faded/60 hover:border-seal/50 hover:text-seal/90"
+      : "border-leather/30 bg-parchment-light/40 text-ink-faded hover:border-leather hover:text-ink";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[12px] leading-none transition ${classes}`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -129,7 +198,6 @@ function AuthorBadge({
 }
 
 function QuillGlyph() {
-  // 깃펜 아이콘 — 사람 손글씨
   return (
     <svg
       width="10"
@@ -149,7 +217,6 @@ function QuillGlyph() {
 }
 
 function AlchemyGlyph() {
-  // 작은 플라스크/증류기 — AI 자동생성 표시
   return (
     <svg
       width="10"

@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 export function ChatInput({
   label,
   onSubmit,
-  onSubmitSibling,
   onCancel,
+  submitLabel = "잇다",
   maxChars = 100,
   hardMaxChars = 120,
   autoFocus = false,
@@ -14,9 +14,8 @@ export function ChatInput({
 }: {
   label: string;
   onSubmit: (text: string) => Promise<void>;
-  // "옆으로 분기" — 같은 지점의 또 다른 갈래로 쓰기. 없으면 버튼 숨김
-  onSubmitSibling?: (text: string) => Promise<void>;
-  onCancel?: () => void;
+  onCancel?: () => void; // X 취소
+  submitLabel?: string;
   maxChars?: number;
   hardMaxChars?: number;
   autoFocus?: boolean;
@@ -34,10 +33,7 @@ export function ChatInput({
   const count = text.trim().length;
   const overSoft = count > maxChars;
 
-  async function run(
-    handler: (text: string) => Promise<void>,
-    e?: React.FormEvent,
-  ) {
+  async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) {
@@ -51,7 +47,7 @@ export function ChatInput({
     setSubmitting(true);
     setError(null);
     try {
-      await handler(trimmed);
+      await onSubmit(trimmed);
       setText("");
       setTimeout(() => ref.current?.focus(), 50);
     } catch (err) {
@@ -59,14 +55,6 @@ export function ChatInput({
     } finally {
       setSubmitting(false);
     }
-  }
-
-  async function handleSubmit(e?: React.FormEvent) {
-    return run(onSubmit, e);
-  }
-  async function handleSibling() {
-    if (!onSubmitSibling) return;
-    return run(onSubmitSibling);
   }
 
   return (
@@ -109,33 +97,22 @@ export function ChatInput({
               type="button"
               onClick={onCancel}
               disabled={submitting}
-              className="ink-button text-xs"
+              title="쓰기 취소"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-leather/40 bg-parchment-light/60 font-display text-sm leading-none text-ink-faded hover:border-seal/60 hover:bg-seal/10 hover:text-seal disabled:opacity-50"
             >
-              접기
-            </button>
-          )}
-          {onSubmitSibling && (
-            <button
-              type="button"
-              onClick={handleSibling}
-              disabled={submitting}
-              title="같은 지점의 또 다른 갈래로 (형제)"
-              className="rounded-full border border-verdigris/50 bg-verdigris/10 px-3 py-1.5 font-display text-xs tracking-widest text-verdigris shadow-sm hover:bg-verdigris/20 disabled:opacity-50"
-            >
-              → 옆으로
+              ×
             </button>
           )}
           <button
             type="submit"
             disabled={submitting}
-            title="이 카드 뒤로 이어쓰기 (자식)"
             className={`rounded-full px-4 py-1.5 font-display text-xs tracking-widest text-parchment-light shadow-md transition ${
               overSoft
                 ? "bg-seal/80 hover:bg-seal"
                 : "bg-seal hover:bg-seal/90"
             } disabled:opacity-50`}
           >
-            {submitting ? "..." : "↓ 아래로"}
+            {submitting ? "..." : submitLabel}
           </button>
         </div>
       </div>
