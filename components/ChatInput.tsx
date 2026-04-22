@@ -119,22 +119,23 @@ export function ChatInput({
               type="button"
               onClick={handleSibling}
               disabled={submitting}
-              title="같은 지점에서 다른 갈래로"
+              title="같은 지점의 또 다른 갈래로 (형제)"
               className="rounded-full border border-verdigris/50 bg-verdigris/10 px-3 py-1.5 font-display text-xs tracking-widest text-verdigris shadow-sm hover:bg-verdigris/20 disabled:opacity-50"
             >
-              옆으로
+              → 옆으로
             </button>
           )}
           <button
             type="submit"
             disabled={submitting}
+            title="이 카드 뒤로 이어쓰기 (자식)"
             className={`rounded-full px-4 py-1.5 font-display text-xs tracking-widest text-parchment-light shadow-md transition ${
               overSoft
                 ? "bg-seal/80 hover:bg-seal"
                 : "bg-seal hover:bg-seal/90"
             } disabled:opacity-50`}
           >
-            {submitting ? "잇는 중..." : "잇다"}
+            {submitting ? "..." : "↓ 아래로"}
           </button>
         </div>
       </div>

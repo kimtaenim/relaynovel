@@ -218,10 +218,15 @@ export function BookReader({
                   <div className="my-3">
                     <InkLine active />
                     <ChatInput
-                      label={`${currentUser} · 여기서 이어쓰기`}
+                      label={`${currentUser} · ↓ 이 뒤에  ·  → 이 카드 옆에`}
                       autoFocus
                       compact
                       onSubmit={(text) => submitNode(node.id, text)}
+                      onSubmitSibling={
+                        node.parentId
+                          ? (text) => submitNode(node.parentId!, text)
+                          : undefined
+                      }
                       onCancel={() => setBranchOpenAt(null)}
                     />
                   </div>
@@ -289,7 +294,7 @@ export function BookReader({
               </p>
             )}
             <ChatInput
-              label={`${currentUser} · 잇다=이어쓰기, 옆으로=같은 지점 분기`}
+              label={`${currentUser} · ↓ 뒤로 잇기  ·  → 옆에 새 갈래`}
               onSubmit={(text) => submitNode(resolvedLeafId, text)}
               onSubmitSibling={
                 leafNode?.parentId
