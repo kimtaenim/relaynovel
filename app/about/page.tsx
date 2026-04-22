@@ -38,8 +38,8 @@ export default function AboutPage() {
               2. 14년 전의 제안, 지금의 구현
             </h2>
             <p className="handwritten leading-loose text-ink">
-              논문에는 세 명의 스토리텔링 전문가가 평가자로 참여했습니다. 그중 C 평가자는
-              매우 긍정적인 평가를 남기면서도 세 가지 제안을 덧붙였습니다.
+              논문에는 세 명의 스토리텔링 전문가가 평가자로 참여했습니다. 그중 한
+              평가자는 매우 긍정적인 평가를 남기면서도 세 가지 제안을 덧붙였습니다.
             </p>
             <ul className="mt-2 list-disc space-y-1 pl-5 handwritten text-ink">
               <li>전체 스토리를 조망할 수 있는 맵 같은 내비게이션</li>
@@ -47,9 +47,10 @@ export default function AboutPage() {
               <li>융·보글러의 아르케타입을 인물 가이드라인으로</li>
             </ul>
             <p className="mt-3 handwritten leading-loose text-ink">
-              이 C 평가자는 시사만화가 <strong>김태권</strong>이었습니다.
-              14년이 지난 지금, 김태권은 이 프로젝트의 오너로서 당시 자신이 제안했던
-              기능들을 직접 구현하고, 전혜정 박사는 재구현의 관리자로서 초기 사용자로 함께 참여하고 있습니다.
+              14년이 지난 2026년, 그 세 가지 제안이 이 앱의 핵심으로 자리잡았습니다.
+              트리 맵은 Stage 5에서 본격적으로 다뤄지고, 캠벨의 플롯 단계는 Stage 6의
+              저작 보조로 준비 중이며, 아르케타입 대신 네 가지 서사 이동(이어가기·반전·의외·다른 인물)이
+              AI 참여자의 역할로 재해석되어 이미 작동하고 있습니다.
             </p>
           </section>
 
@@ -97,19 +98,11 @@ export default function AboutPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 font-display text-lg text-ink">5. 코드와 저작권</h2>
+            <h2 className="mb-2 font-display text-lg text-ink">5. 저작권</h2>
             <p className="handwritten leading-loose text-ink">
-              이 애플리케이션의 소스 코드는{" "}
-              <a
-                href="https://github.com/kimtaenim/relaynovel"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-dotted underline-offset-2 hover:text-seal"
-              >
-                github.com/kimtaenim/relaynovel
-              </a>
-              에 공개되어 있습니다. 참여자들이 함께 쓴 글의 저작권은 집합적으로 귀속되며,
-              상업적 이용은 별도 협의가 필요합니다.
+              참여자들이 함께 쓴 글의 저작권은 집합적으로 귀속되며,
+              상업적 이용은 별도 협의가 필요합니다. AI가 제안해 참여자가 채택한 토막은
+              호출한 참여자의 이름으로 트리에 기록됩니다.
             </p>
           </section>
         </article>
