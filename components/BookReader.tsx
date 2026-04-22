@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Book } from "@/lib/types";
 import {
   getDeepestLeaf,
@@ -41,6 +41,25 @@ export function BookReader({
   );
 
   const [branchOpenAt, setBranchOpenAt] = useState<string | null>(null);
+  const [lastSync, setLastSync] = useState<number>(Date.now());
+
+  // 다른 참여자가 쓴 글을 받아오기 위한 폴링 + 탭 포커스 시 갱신
+  useEffect(() => {
+    let id: ReturnType<typeof setInterval> | null = null;
+    const doRefresh = () => {
+      router.refresh();
+      setLastSync(Date.now());
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") doRefresh();
+    };
+    id = setInterval(doRefresh, 20000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      if (id) clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router]);
 
   // AI 호출 상태
   const [aiBusy, setAiBusy] = useState(false);
@@ -146,8 +165,11 @@ export function BookReader({
     <div className="relative">
       {/* 경로 인디케이터 */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-script text-xs italic text-parchment-light/70">
-        <span>
-          이 갈래 {totalInPath}토막 · 전체 {totalActive}토막
+        <span className="flex items-center gap-2">
+          <span>
+            이 갈래 {totalInPath}토막 · 전체 {totalActive}토막
+          </span>
+          <SyncDot lastSync={lastSync} />
         </span>
         {leafQuery && (
           <button
@@ -291,5 +313,33 @@ export function BookReader({
         </div>
       )}
     </div>
+  );
+}
+
+// 동기화 상태 인디케이터 — 다른 참여자 글이 들어왔는지 폴링 결과 표시
+function SyncDot({ lastSync }: { lastSync: number }) {
+  const [now, setNow] = useState(lastSync);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(id);
+  }, []);
+  const ago = Math.max(0, now - lastSync);
+  const seconds = Math.floor(ago / 1000);
+  const fresh = seconds < 10;
+  return (
+    <span
+      className={`flex items-center gap-1 text-[10px] ${
+        fresh ? "text-verdigris" : "text-parchment-light/50"
+      }`}
+      title={`마지막 동기화: ${seconds}초 전`}
+    >
+      <span
+        className={`inline-block h-1.5 w-1.5 rounded-full ${
+          fresh ? "bg-verdigris animate-pulse" : "bg-parchment-light/40"
+        }`}
+        aria-hidden
+      />
+      {fresh ? "방금 갱신" : `${seconds}초 전`}
+    </span>
   );
 }
