@@ -4,6 +4,8 @@ import { getSession } from "@/lib/session";
 import { getBook } from "@/lib/books";
 import { BookReader } from "@/components/BookReader";
 import { InviteButton } from "@/components/InviteButton";
+import { LogoutButton } from "@/components/LogoutButton";
+import { listPresent } from "@/lib/presence";
 
 export const dynamic = "force-dynamic";
 
@@ -21,34 +23,14 @@ export default async function BookPage({
 
   const isMaster = book.createdBy === session.nickname;
   const isParticipant = book.participants.includes(session.nickname);
-  const hasAccess =
-    isMaster ||
-    isParticipant ||
-    session.bookAccess.includes(book.id);
 
-  if (!hasAccess) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-4 py-12">
-        <div className="parchment w-full max-w-md rounded-3xl p-8 text-center shadow-parchment">
-          <p className="font-script text-xs italic tracking-widest text-ink-faded/70">
-            잠긴 책
-          </p>
-          <h1 className="mt-2 font-display text-xl text-ink">
-            이 책은 초대받은 분만 볼 수 있습니다
-          </h1>
-          <p className="mt-3 font-script text-sm italic text-ink-faded">
-            시삽에게 초대 링크를 요청하세요.
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-block rounded-full border border-leather/40 bg-parchment-dark/40 px-5 py-2 font-display text-sm tracking-widest text-ink hover:bg-parchment-dark/60"
-          >
-            서재로 돌아가기
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const present = await listPresent();
+  const now = Date.now();
+  const othersOnline = present.filter(
+    (p) => p.nickname !== session.nickname && now - p.lastSeen < 2 * 60 * 1000,
+  );
+
+  // 2인 MVP 신뢰 환경: 로그인한 누구든 읽기 가능. 글 쓰면 자동으로 참여자 등록.
 
   return (
     <main className="min-h-screen px-3 py-4 sm:px-4 sm:py-8">
@@ -70,6 +52,14 @@ export default async function BookPage({
             <span className="text-parchment-light/60">
               참여 {book.participants.length}명
             </span>
+            {!isMaster && !isParticipant && (
+              <>
+                <span className="text-parchment-light/30">·</span>
+                <span className="rounded-full border border-pewter/40 bg-pewter/10 px-2 py-0.5 text-[10px] text-pewter">
+                  구경중
+                </span>
+              </>
+            )}
           </span>
           <span className="flex flex-shrink-0 items-center gap-2">
             {isMaster && <InviteButton bookId={book.id} />}
@@ -81,8 +71,26 @@ export default async function BookPage({
             >
               지도
             </Link>
+            <LogoutButton variant="subtle" />
           </span>
         </nav>
+
+        {/* 지금 접속 중인 다른 참여자 (없으면 나만) */}
+        <div className="mb-3 flex items-center gap-2 font-script text-[11px] italic text-parchment-light/60">
+          <span
+            className={`inline-block h-2 w-2 rounded-full ${
+              othersOnline.length > 0
+                ? "bg-verdigris animate-pulse"
+                : "bg-parchment-light/30"
+            }`}
+            aria-hidden
+          />
+          <span>
+            {othersOnline.length > 0
+              ? `함께 접속: ${othersOnline.map((o) => o.nickname).join(", ")}`
+              : "지금 이 서재엔 나뿐입니다"}
+          </span>
+        </div>
 
         <BookReader book={book} currentUser={session.nickname} />
       </div>

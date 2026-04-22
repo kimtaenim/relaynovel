@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 import { redis, keys } from "./redis";
 import type { Session } from "./types";
+import { touchPresence } from "./presence";
 
 const SESSION_COOKIE = "rn_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 90; // 90일
@@ -32,6 +33,10 @@ export async function getSession(): Promise<Session | null> {
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!sessionId) return null;
   const session = await redis().get<Session>(keys.session(sessionId));
+  if (session) {
+    // 이 닉네임이 방금 활동했음을 프레젠스에 기록
+    void touchPresence(session.nickname);
+  }
   return session ?? null;
 }
 

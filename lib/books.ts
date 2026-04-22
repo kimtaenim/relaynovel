@@ -61,6 +61,7 @@ export async function getBook(bookId: string): Promise<Book | null> {
 }
 
 export async function listBooksForUser(nickname: string): Promise<Book[]> {
+  // 2인 MVP 신뢰 환경: 내 책만 보여주는 용도 (분류용)
   const r = redis();
   const ids = await r.smembers(keys.booksIndex);
   if (!ids || ids.length === 0) return [];
@@ -74,6 +75,37 @@ export async function listBooksForUser(nickname: string): Promise<Book[]> {
         b.createdBy === nickname || b.participants.includes(nickname),
     )
     .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export async function listAllBooks(): Promise<Book[]> {
+  const r = redis();
+  const ids = await r.smembers(keys.booksIndex);
+  if (!ids || ids.length === 0) return [];
+  const books = await Promise.all(
+    ids.map((id) => r.get<Book>(keys.book(id))),
+  );
+  return books
+    .filter((b): b is Book => b !== null)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export interface ShelfSection {
+  mine: Book[]; // 내가 시삽이거나 참여자인 책
+  others: Book[]; // 그 외 (다른 분들이 쓰는 책)
+}
+
+export async function listShelfForUser(nickname: string): Promise<ShelfSection> {
+  const all = await listAllBooks();
+  const mine: Book[] = [];
+  const others: Book[] = [];
+  for (const b of all) {
+    if (b.createdBy === nickname || b.participants.includes(nickname)) {
+      mine.push(b);
+    } else {
+      others.push(b);
+    }
+  }
+  return { mine, others };
 }
 
 export async function countNodes(book: Book): Promise<number> {
