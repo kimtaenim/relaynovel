@@ -232,7 +232,7 @@ export function BookReader({
                   </div>
                 )}
 
-                {/* 다음 노드로 연결 */}
+                {/* 다음 노드로 연결: 세로 잉크선 하나 + 다른 갈래 힌트(선택 안 된 형제) */}
                 {!isLeaf && !isBranchInputOpen && (
                   <>
                     <InkLine active />
@@ -245,7 +245,6 @@ export function BookReader({
                         setLeaf(id);
                       }}
                     />
-                    {activeChildCount >= 2 && <InkLine active />}
                   </>
                 )}
               </div>

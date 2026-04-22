@@ -3,7 +3,8 @@
 import type { Book, Node } from "@/lib/types";
 import { countDescendants } from "@/lib/tree";
 
-// 분기점에서 N개 자식 중 하나를 고르는 컴팩트한 가로 pill UI
+// 분기점 힌트 — 선택된 갈래는 표시 안 하고 (세로 축으로 흐름 유지),
+// 선택 안 된 형제 갈래들만 작은 pill로 옆에 띄워서 전환 가능하게.
 export function BranchPills({
   book,
   branchNode,
@@ -19,51 +20,40 @@ export function BranchPills({
     .map((cid) => book.nodes[cid])
     .filter((c): c is Node => !!c && c.status === "active");
 
-  if (active.length === 0) return null;
-  if (active.length === 1) {
-    // 자식이 하나면 UI 없이 그냥 선만 흐르게 (BookReader가 InkLine 그림)
-    return null;
-  }
+  const others = active.filter((c) => c.id !== selectedChildId);
+
+  // 분기 없거나 (자식 1개), 선택된 자식 외 다른 게 없으면 아무것도 안 보임
+  if (others.length === 0) return null;
 
   return (
-    <div className="my-1 flex flex-col items-center gap-2">
-      <div className="font-script text-[11px] italic text-ink-faded/70">
-        여기서 {active.length}갈래 — 읽을 갈래를 고르세요
+    <div className="my-2 flex flex-col items-center gap-1.5">
+      <div className="font-script text-[10px] italic tracking-wider text-ink-faded/60">
+        ·&nbsp;이 지점의 다른 갈래 {others.length}개&nbsp;·
       </div>
-      <div className="flex flex-wrap justify-center gap-2">
-        {active.map((child) => {
-          const isSelected = child.id === selectedChildId;
+      <div className="flex flex-wrap justify-center gap-1.5">
+        {others.map((child) => {
           const size = countDescendants(book, child.id);
+          const isAI = child.authorType === "ai";
           return (
             <button
               key={child.id}
               type="button"
               onClick={() => onChoose(child.id)}
-              className={`max-w-[240px] rounded-2xl border px-3 py-2 text-left transition ${
-                isSelected
-                  ? "border-seal/70 bg-seal/10 shadow-inner"
-                  : child.authorType === "ai"
-                    ? "border-champagne/40 bg-parchment-light/55 hover:border-champagne/70 hover:bg-parchment-light/80"
-                    : "border-leather/30 bg-parchment-light/50 hover:border-leather/60 hover:bg-parchment-light/80"
+              title={child.text}
+              className={`max-w-[200px] truncate rounded-full border px-3 py-1 text-[11px] transition ${
+                isAI
+                  ? "border-champagne/50 bg-champagne-light/20 text-ink-faded hover:border-champagne hover:bg-champagne-light/40 hover:text-ink"
+                  : "border-leather/40 bg-parchment-light/50 text-ink-faded hover:border-leather hover:bg-parchment-light/80 hover:text-ink"
               }`}
             >
-              <span className="line-clamp-2 text-xs text-ink sm:text-sm">
-                {child.text}
+              <span className="truncate">
+                {isAI ? `@${child.archetype}` : child.author}:
+                {" "}
+                {child.text.length > 18
+                  ? child.text.slice(0, 18) + "…"
+                  : child.text}
               </span>
-              <span className="mt-1 flex items-center gap-1 font-script text-[10px] italic text-ink-faded/80">
-                {child.authorType === "ai" ? (
-                  <span className="rounded-full border border-champagne/50 bg-champagne-light/30 px-1.5 py-0.5 not-italic tracking-wider">
-                    AI @{child.archetype ?? "??"}
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-seal/30 bg-seal/5 px-1.5 py-0.5 not-italic tracking-wider">
-                    {child.author}
-                  </span>
-                )}
-                <span>
-                  · {isSelected ? "지금 읽는 갈래" : "탭해서 전환"} · {size}토막
-                </span>
-              </span>
+              <span className="ml-1 text-ink-faded/60">· {size}토막</span>
             </button>
           );
         })}
