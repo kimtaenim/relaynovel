@@ -47,7 +47,9 @@ export function StoryNode({
         <WaxDot authorType={node.authorType} />
         <span>{authorLabel}</span>
         {node.adoptedBy && (
-          <span className="text-ink-faded/50">· 채택 {node.adoptedBy}</span>
+          <span className="text-ink-faded/50">
+            · {node.authorType === "ai" ? "호출" : "채택"} {node.adoptedBy}
+          </span>
         )}
         {node.isEnding && <span className="text-seal/80">· 종결</span>}
         {!node.isEnding && onStartBranch && (

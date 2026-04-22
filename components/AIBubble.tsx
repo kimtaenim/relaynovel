@@ -38,7 +38,7 @@ export function AIBubblePanel({
           disabled={busy}
           className="underline decoration-dotted underline-offset-2 hover:text-ink disabled:opacity-50"
         >
-          다 버리기
+          나중에
         </button>
       </div>
 
@@ -56,7 +56,7 @@ export function AIBubblePanel({
       </ul>
 
       <p className="mt-3 font-script text-[10px] italic text-ink-faded/70">
-        하나를 채택하면 그 갈래가 정식 토막이 됩니다. 나머지 둘은 그림자로 남아요.
+        세 갈래 모두 정식 토막으로 트리에 추가됐습니다. 어느 쪽을 먼저 읽을지 골라보세요. 나중에 다시 와서 다른 갈래도 이어쓸 수 있습니다.
       </p>
     </div>
   );
@@ -87,7 +87,7 @@ function Bubble({
           disabled={disabled}
           className="rounded-full bg-seal px-3 py-1 font-display text-[11px] not-italic tracking-widest text-parchment-light shadow hover:bg-seal/90 disabled:opacity-50"
         >
-          {disabled ? "처리중..." : "채택"}
+          이 갈래로
         </button>
       </div>
     </div>

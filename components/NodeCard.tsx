@@ -111,7 +111,7 @@ function AuthorBadge({
           AI · @{archetype ?? "??"}
         </span>
         {adoptedBy && !small && (
-          <span className="text-ink-faded/70">· 채택 {adoptedBy}</span>
+          <span className="text-ink-faded/70">· 호출 {adoptedBy}</span>
         )}
       </span>
     );

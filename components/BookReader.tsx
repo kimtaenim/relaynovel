@@ -98,31 +98,14 @@ export function BookReader({
     }
   }
 
-  async function adoptProposal(proposalId: string) {
-    if (!aiPanel) return;
-    setAiBusy(true);
-    try {
-      const res = await fetch(`/api/nodes/${proposalId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookId: book.id, status: "active" }),
-      });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.error ?? "채택 실패");
-      }
-      // 채택된 노드를 리프로 이동
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("leaf", proposalId);
-      params.delete("focus");
-      router.replace(`?${params.toString()}`, { scroll: false });
-      setAiPanel(null);
-      router.refresh();
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : "채택 실패");
-    } finally {
-      setAiBusy(false);
-    }
+  function goToProposal(proposalId: string) {
+    // 3개 모두 이미 active 상태라 PATCH 불필요 — 바로 해당 갈래로 이동
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("leaf", proposalId);
+    params.delete("focus");
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setAiPanel(null);
+    router.refresh();
   }
 
   const setLeaf = useCallback(
@@ -264,12 +247,12 @@ export function BookReader({
             );
           })}
 
-          {/* AI 제안 패널 — 리프에서 호출되면 여기 렌더 */}
+          {/* AI 제안 패널 — 호출된 부모에서 렌더 */}
           {aiPanel && aiPanel.parentId === leafNode?.id && (
             <AIBubblePanel
               archetype={aiPanel.archetype}
               proposals={aiPanel.proposals}
-              onAdopt={adoptProposal}
+              onAdopt={goToProposal}
               onDismiss={() => setAiPanel(null)}
               busy={aiBusy}
             />

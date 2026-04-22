@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3개의 shadow 노드를 생성하고 서로 shadowSiblings로 연결
+    // 3개 모두 정식 active 갈래로 생성 — 트리가 여기서 팔처럼 뻗어나감
     const now = Date.now();
     const newIds = proposals.map(() => uuidv4());
-    const shadowNodes: Node[] = proposals.map((p, i) => ({
+    const newNodes: Node[] = proposals.map((p, i) => ({
       id: newIds[i],
       bookId,
       text: p.text,
@@ -90,33 +90,41 @@ export async function POST(req: NextRequest) {
       archetype: archetypeInput,
       parentId,
       childrenIds: [],
-      createdAt: now,
-      status: "shadow",
+      createdAt: now + i, // 정렬 안정성을 위해 미세 오프셋
+      status: "active",
       isEnding: false,
       likeCount: 0,
       likedBy: [],
-      shadowSiblings: newIds.filter((_, j) => j !== i),
-      shadowSourceNodeId: parentId,
+      adoptedBy: session.nickname, // AI를 호출한 사람 기록
     }));
 
-    // 책에 반영
+    // 호출한 사람을 참여자에도 추가
+    let participants = book.participants;
+    if (
+      book.createdBy !== session.nickname &&
+      !participants.includes(session.nickname)
+    ) {
+      participants = [...participants, session.nickname];
+    }
+
     const updated: Book = {
       ...book,
       nodes: {
         ...book.nodes,
-        ...Object.fromEntries(shadowNodes.map((n) => [n.id, n])),
+        ...Object.fromEntries(newNodes.map((n) => [n.id, n])),
         [parentId]: {
           ...parent,
           childrenIds: [...parent.childrenIds, ...newIds],
         },
       },
+      participants,
       updatedAt: now,
     };
     await redis().set(keys.book(bookId), updated);
     await redis().zadd(keys.booksByUpdated, { score: now, member: bookId });
 
     return NextResponse.json({
-      proposals: shadowNodes.map((n) => ({ id: n.id, text: n.text })),
+      proposals: newNodes.map((n) => ({ id: n.id, text: n.text })),
       archetype: archetypeInput,
       usage,
     });
