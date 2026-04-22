@@ -6,7 +6,7 @@ export function ChatInput({
   label,
   onSubmit,
   onCancel,
-  submitLabel = "잇다",
+  submitLabel = "이어 쓰기",
   maxChars = 100,
   hardMaxChars = 120,
   autoFocus = false,
@@ -79,6 +79,9 @@ export function ChatInput({
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();
             void handleSubmit();
+          } else if (e.key === "Escape" && onCancel) {
+            e.preventDefault();
+            onCancel();
           }
         }}
         rows={2}
@@ -97,10 +100,10 @@ export function ChatInput({
               type="button"
               onClick={onCancel}
               disabled={submitting}
-              title="쓰기 취소"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-leather/40 bg-parchment-light/60 font-display text-sm leading-none text-ink-faded hover:border-seal/60 hover:bg-seal/10 hover:text-seal disabled:opacity-50"
+              title="쓰기 취소 (Esc)"
+              className="inline-flex h-7 items-center justify-center rounded-full border border-leather/40 bg-parchment-light/60 px-2.5 font-display text-[10px] uppercase tracking-widest text-ink-faded hover:border-seal/60 hover:bg-seal/10 hover:text-seal disabled:opacity-50"
             >
-              ×
+              esc
             </button>
           )}
           <button

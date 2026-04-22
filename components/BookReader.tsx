@@ -305,7 +305,7 @@ export function BookReader({
                       label={`${currentUser} · 이 카드 ↓ 뒤에 잇기`}
                       autoFocus
                       compact
-                      submitLabel="↓ 잇다"
+                      submitLabel="↓ 이어 쓰기"
                       onSubmit={(text) => submitNode(node.id, text)}
                       onCancel={() => setBranchOpen(null)}
                     />

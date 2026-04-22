@@ -117,7 +117,7 @@ export function NodeCard({
                   )
                     onDelete();
                 }}
-                label="🗑"
+                label="×"
               />
             )}
           </div>
