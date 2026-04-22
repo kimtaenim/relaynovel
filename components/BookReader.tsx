@@ -422,10 +422,31 @@ export function BookReader({
         </div>
       </article>
 
-      {/* 바닥 고정 영역 — 아르케타입 바 + 방향 시작 버튼 */}
-      {!leafNode?.isEnding && !branchOpen && !aiPanel && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-leather/40 bg-mahogany/92 px-3 pb-[env(safe-area-inset-bottom,0.5rem)] pt-2 backdrop-blur-sm sm:px-4 sm:pt-3">
-          <div className="mx-auto flex max-w-3xl flex-col gap-2">
+      {/* 바닥 고정 영역 — 항상 렌더 (모아 읽기 + 정보 + 조건부 쓰기 영역) */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-leather/40 bg-mahogany/92 px-3 pb-[env(safe-area-inset-bottom,0.5rem)] pt-2 backdrop-blur-sm sm:px-4 sm:pt-3">
+        <div className="mx-auto flex max-w-3xl flex-col gap-2">
+          {/* 언제나 보이는 상단 유틸리티 바 */}
+          <div className="flex items-center justify-center gap-2">
+            <a
+              href={`/book/${book.id}/read${
+                leafQuery ? `?leaf=${resolvedLeafId}` : ""
+              }`}
+              className="rounded-full bg-parchment-light/90 px-3 py-1 font-script text-[11px] not-italic tracking-wider text-ink shadow-inner hover:bg-parchment-light"
+            >
+              📖 이 갈래 모아 읽기
+            </a>
+            <a
+              href="/about"
+              title="이 프로젝트 소개"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-champagne/50 bg-champagne-dark/40 font-display text-[11px] text-parchment-light hover:bg-champagne-dark/70"
+            >
+              i
+            </a>
+          </div>
+
+          {/* 쓰기 영역 — 조건부 */}
+          {!leafNode?.isEnding && !branchOpen && !aiPanel && (
+            <>
             <ArchetypeBar
               enabled={book.archetypesEnabled}
               onInvoke={(k) => invokeArchetype(k, resolvedLeafId)}
@@ -468,9 +489,10 @@ export function BookReader({
                 </button>
               )}
             </div>
-          </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
