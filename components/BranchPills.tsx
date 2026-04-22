@@ -3,8 +3,10 @@
 import type { Book, Node } from "@/lib/types";
 import { countDescendants } from "@/lib/tree";
 
-// 분기점 힌트 — 선택된 갈래는 표시 안 하고 (세로 축으로 흐름 유지),
-// 선택 안 된 형제 갈래들만 작은 pill로 옆에 띄워서 전환 가능하게.
+// 분기점에서 N개 자식을 작은 박스로 나란히 표시.
+// 선택된 것은 밝게 강조, 선택 안 된 것들은 흐리게.
+// 아래에 큰 카드로 같은 내용이 다시 나오므로 (세로 축으로 이어져서)
+// 이 pill들은 "미리보기 + 선택 스위처" 역할.
 export function BranchPills({
   book,
   branchNode,
@@ -20,40 +22,57 @@ export function BranchPills({
     .map((cid) => book.nodes[cid])
     .filter((c): c is Node => !!c && c.status === "active");
 
-  const others = active.filter((c) => c.id !== selectedChildId);
-
-  // 분기 없거나 (자식 1개), 선택된 자식 외 다른 게 없으면 아무것도 안 보임
-  if (others.length === 0) return null;
+  if (active.length <= 1) return null;
 
   return (
     <div className="my-2 flex flex-col items-center gap-1.5">
       <div className="font-script text-[10px] italic tracking-wider text-ink-faded/60">
-        ·&nbsp;이 지점의 다른 갈래 {others.length}개&nbsp;·
+        · 여기서 {active.length}갈래 — 탭해서 바꿀 수 있음 ·
       </div>
       <div className="flex flex-wrap justify-center gap-1.5">
-        {others.map((child) => {
-          const size = countDescendants(book, child.id);
+        {active.map((child) => {
+          const isSelected = child.id === selectedChildId;
           const isAI = child.authorType === "ai";
+          const size = countDescendants(book, child.id);
           return (
             <button
               key={child.id}
               type="button"
               onClick={() => onChoose(child.id)}
               title={child.text}
-              className={`max-w-[200px] truncate rounded-full border px-3 py-1 text-[11px] transition ${
-                isAI
-                  ? "border-champagne/50 bg-champagne-light/20 text-ink-faded hover:border-champagne hover:bg-champagne-light/40 hover:text-ink"
-                  : "border-leather/40 bg-parchment-light/50 text-ink-faded hover:border-leather hover:bg-parchment-light/80 hover:text-ink"
-              }`}
+              className={[
+                "relative max-w-[180px] rounded-xl border px-2.5 py-1.5 text-left transition",
+                isSelected
+                  ? isAI
+                    ? "border-champagne bg-champagne-light/70 shadow-sm"
+                    : "border-seal/60 bg-parchment-light shadow-sm"
+                  : isAI
+                    ? "border-champagne/30 bg-champagne-light/10 opacity-60 hover:opacity-100 hover:border-champagne/70"
+                    : "border-leather/25 bg-parchment-light/30 opacity-60 hover:opacity-100 hover:border-leather/60",
+              ].join(" ")}
             >
-              <span className="truncate">
-                {isAI ? `@${child.archetype}` : child.author}:
-                {" "}
-                {child.text.length > 18
-                  ? child.text.slice(0, 18) + "…"
-                  : child.text}
-              </span>
-              <span className="ml-1 text-ink-faded/60">· {size}토막</span>
+              <div
+                className={`line-clamp-2 text-[11px] leading-snug ${
+                  isSelected ? "text-ink" : "text-ink-faded"
+                }`}
+              >
+                {child.text}
+              </div>
+              <div
+                className={`mt-0.5 flex items-center gap-1 text-[9px] italic ${
+                  isSelected ? "text-ink-faded" : "text-ink-faded/70"
+                }`}
+              >
+                <span
+                  className={`not-italic font-script tracking-wider ${
+                    isAI ? "text-champagne-dark" : "text-seal/80"
+                  }`}
+                >
+                  {isAI ? `@${child.archetype}` : child.author}
+                </span>
+                <span>· {size}토막</span>
+                {isSelected && <span>· 지금</span>}
+              </div>
             </button>
           );
         })}
