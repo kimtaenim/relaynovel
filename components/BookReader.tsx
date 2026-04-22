@@ -289,8 +289,13 @@ export function BookReader({
               </p>
             )}
             <ChatInput
-              label={`${currentUser} · Enter로 보내기`}
+              label={`${currentUser} · 잇다=이어쓰기, 옆으로=같은 지점 분기`}
               onSubmit={(text) => submitNode(resolvedLeafId, text)}
+              onSubmitSibling={
+                leafNode?.parentId
+                  ? (text) => submitNode(leafNode.parentId!, text)
+                  : undefined
+              }
             />
           </div>
         </div>

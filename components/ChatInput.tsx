@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export function ChatInput({
   label,
   onSubmit,
+  onSubmitSibling,
   onCancel,
   maxChars = 100,
   hardMaxChars = 120,
@@ -13,6 +14,8 @@ export function ChatInput({
 }: {
   label: string;
   onSubmit: (text: string) => Promise<void>;
+  // "옆으로 분기" — 같은 지점의 또 다른 갈래로 쓰기. 없으면 버튼 숨김
+  onSubmitSibling?: (text: string) => Promise<void>;
   onCancel?: () => void;
   maxChars?: number;
   hardMaxChars?: number;
@@ -31,7 +34,10 @@ export function ChatInput({
   const count = text.trim().length;
   const overSoft = count > maxChars;
 
-  async function handleSubmit(e?: React.FormEvent) {
+  async function run(
+    handler: (text: string) => Promise<void>,
+    e?: React.FormEvent,
+  ) {
     e?.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) {
@@ -45,15 +51,22 @@ export function ChatInput({
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit(trimmed);
+      await handler(trimmed);
       setText("");
-      // 전송 후 커서 유지 — 연속 입력용
       setTimeout(() => ref.current?.focus(), 50);
     } catch (err) {
       setError(err instanceof Error ? err.message : "전송 실패");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleSubmit(e?: React.FormEvent) {
+    return run(onSubmit, e);
+  }
+  async function handleSibling() {
+    if (!onSubmitSibling) return;
+    return run(onSubmitSibling);
   }
 
   return (
@@ -99,6 +112,17 @@ export function ChatInput({
               className="ink-button text-xs"
             >
               접기
+            </button>
+          )}
+          {onSubmitSibling && (
+            <button
+              type="button"
+              onClick={handleSibling}
+              disabled={submitting}
+              title="같은 지점에서 다른 갈래로"
+              className="rounded-full border border-verdigris/50 bg-verdigris/10 px-3 py-1.5 font-display text-xs tracking-widest text-verdigris shadow-sm hover:bg-verdigris/20 disabled:opacity-50"
+            >
+              옆으로
             </button>
           )}
           <button
