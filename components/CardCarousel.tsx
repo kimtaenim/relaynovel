@@ -35,8 +35,7 @@ export function CardCarousel({
     <div className="w-full">
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory scroll-smooth"
-        style={{ scrollbarWidth: "thin" }}
+        className="no-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory scroll-smooth"
       >
         {slides.map((s, i) => (
           <div

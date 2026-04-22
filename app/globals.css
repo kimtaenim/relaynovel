@@ -152,6 +152,16 @@
   .text-shadow-ink-soft {
     text-shadow: 0 0 1px rgba(43, 24, 16, 0.3);
   }
+  /* 스크롤바 숨김 — 가로 스와이프 영역에 사용 */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 }
 
 /* 카드 부유 애니메이션 — 각 카드마다 약간 다른 주기/딜레이로 비동기 움직임 */
