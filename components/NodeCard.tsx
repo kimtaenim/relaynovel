@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import type { Node } from "@/lib/types";
 import { ARCHETYPES } from "@/lib/archetypes";
 
@@ -13,21 +14,75 @@ export function NodeCard({
   canSibling = true,
   onDelete,
   canDelete = false,
+  onEdit,
+  canEdit = false,
   openDirection = null,
 }: {
   node: Node;
   variant?: "main" | "peek";
   isRoot?: boolean;
   onClick?: () => void;
-  onStartChild?: () => void; // ↓ 아래로 잇기 열기
-  onStartSibling?: () => void; // → 옆에 갈래 열기
-  canSibling?: boolean; // 루트는 false
+  onStartChild?: () => void;
+  onStartSibling?: () => void;
+  canSibling?: boolean;
   onDelete?: () => void;
   canDelete?: boolean;
-  openDirection?: "child" | "sibling" | null; // 어느 방향 입력창이 열려있는지
+  onEdit?: (text: string) => Promise<void>;
+  canEdit?: boolean;
+  openDirection?: "child" | "sibling" | null;
 }) {
   const isPeek = variant === "peek";
   const isAI = node.authorType === "ai";
+
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(node.text);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const editRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (editing && editRef.current) {
+      editRef.current.focus();
+      editRef.current.setSelectionRange(
+        editRef.current.value.length,
+        editRef.current.value.length,
+      );
+    }
+  }, [editing]);
+
+  // node.text가 바뀌면 (외부 업데이트 반영) editText 초기화
+  useEffect(() => {
+    if (!editing) setEditText(node.text);
+  }, [node.text, editing]);
+
+  async function saveEdit() {
+    if (!onEdit) return;
+    const trimmed = editText.trim();
+    if (!trimmed) {
+      setEditError("내용이 비어 있습니다.");
+      return;
+    }
+    if (trimmed === node.text) {
+      setEditing(false);
+      return;
+    }
+    setEditBusy(true);
+    setEditError(null);
+    try {
+      await onEdit(trimmed);
+      setEditing(false);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "수정 실패");
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  function cancelEdit() {
+    setEditText(node.text);
+    setEditing(false);
+    setEditError(null);
+  }
 
   return (
     <div
@@ -49,18 +104,75 @@ export function NodeCard({
           첫 토막
         </p>
       )}
-      <p
-        className={[
-          "handwritten leading-loose",
-          isPeek
-            ? "line-clamp-3 text-xs text-ink-faded"
-            : isRoot
-              ? "text-center text-base sm:text-lg md:text-xl"
-              : "text-base sm:text-lg",
-        ].join(" ")}
-      >
-        {node.text}
-      </p>
+      {editing && !isPeek ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            ref={editRef}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value.slice(0, 120))}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                (e.metaKey || e.ctrlKey) &&
+                !e.nativeEvent.isComposing
+              ) {
+                e.preventDefault();
+                void saveEdit();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelEdit();
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            disabled={editBusy}
+            rows={3}
+            className="w-full resize-none rounded-xl border border-leather/40 bg-parchment-light/90 px-3 py-2 font-serif text-base leading-relaxed text-ink focus:border-leather focus:outline-none"
+          />
+          <div className="flex items-center justify-between gap-2 font-script text-[11px] italic">
+            <span className="text-seal/80">{editError ?? ""}</span>
+            <span className="flex items-center gap-2">
+              <span className="text-ink-faded/60">
+                {editText.trim().length} / 100
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cancelEdit();
+                }}
+                disabled={editBusy}
+                className="inline-flex h-7 items-center rounded-full border border-leather/40 bg-parchment-light/60 px-2.5 font-display text-[10px] uppercase tracking-widest text-ink-faded hover:border-seal/60 hover:bg-seal/10 hover:text-seal disabled:opacity-50"
+              >
+                esc
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void saveEdit();
+                }}
+                disabled={editBusy}
+                className="rounded-full bg-seal px-3 py-1.5 font-display text-[11px] not-italic tracking-widest text-parchment-light shadow hover:bg-seal/90 disabled:opacity-50"
+              >
+                {editBusy ? "저장중..." : "저장"}
+              </button>
+            </span>
+          </div>
+        </div>
+      ) : (
+        <p
+          className={[
+            "handwritten leading-loose",
+            isPeek
+              ? "line-clamp-3 text-xs text-ink-faded"
+              : isRoot
+                ? "text-center text-base sm:text-lg md:text-xl"
+                : "text-base sm:text-lg",
+          ].join(" ")}
+        >
+          {node.text}
+        </p>
+      )}
 
       {/* 저자 배지 + 액션 버튼 */}
       <div
@@ -81,8 +193,8 @@ export function NodeCard({
           <span className="text-seal/80">· 종결</span>
         )}
 
-        {/* 액션 버튼들 — 방향별 잇기 + 삭제 */}
-        {!isPeek && !node.isEnding && (
+        {/* 액션 버튼들 — 방향별 잇기 + 수정 + 삭제 */}
+        {!isPeek && !node.isEnding && !editing && (
           <div className="flex items-center gap-1">
             {canSibling && onStartSibling && (
               <IconButton
@@ -104,6 +216,16 @@ export function NodeCard({
                   onStartChild();
                 }}
                 label="↓"
+              />
+            )}
+            {canEdit && onEdit && (
+              <IconButton
+                title="이 토막 수정 (본인/호출자만)"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing(true);
+                }}
+                label="✎"
               />
             )}
             {canDelete && onDelete && (

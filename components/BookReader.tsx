@@ -123,6 +123,19 @@ export function BookReader({
     [book, router, searchParams],
   );
 
+  async function editNode(nodeId: string, text: string): Promise<void> {
+    const res = await fetch(`/api/nodes/${nodeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookId: book.id, text }),
+    });
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      throw new Error(b.error ?? "수정 실패");
+    }
+    router.refresh();
+  }
+
   async function deleteNode(nodeId: string) {
     const res = await fetch(`/api/nodes/${nodeId}`, {
       method: "PATCH",
@@ -296,6 +309,12 @@ export function BookReader({
                   onDelete={
                     isActive && sibCanDelete
                       ? () => deleteNode(sibNode.id)
+                      : undefined
+                  }
+                  canEdit={isActive && (sibIsAuthor || sibIsInvoker)}
+                  onEdit={
+                    isActive && (sibIsAuthor || sibIsInvoker)
+                      ? (text) => editNode(sibNode.id, text)
                       : undefined
                   }
                   openDirection={isActive ? openDirection : null}
