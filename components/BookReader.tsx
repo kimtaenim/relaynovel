@@ -11,6 +11,7 @@ import {
 import { NodeCard } from "./NodeCard";
 import { InkLine } from "./Connector";
 import { BranchPills } from "./BranchPills";
+import { SiblingCarousel } from "./SiblingCarousel";
 import { ChatInput } from "./ChatInput";
 import { ParchmentCorners } from "./ParchmentDecor";
 import { ArchetypeBar } from "./ArchetypeBar";
@@ -294,6 +295,19 @@ export function BookReader({
                       canDelete ? () => deleteNode(node.id) : undefined
                     }
                     openDirection={openDirection}
+                  />
+                )}
+
+                {/* 이 카드의 형제 캐러셀 — 부모의 다른 자식들 */}
+                {idx > 0 && openDirection !== "sibling" && (
+                  <SiblingCarousel
+                    book={book}
+                    parentNode={path[idx - 1]}
+                    selectedChildId={node.id}
+                    onChoose={(id) => {
+                      setBranchOpen(null);
+                      setLeaf(id);
+                    }}
                   />
                 )}
 
