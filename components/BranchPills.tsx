@@ -34,11 +34,16 @@ export function BranchPills({
   }
 
   return (
-    <div className="my-2 flex flex-col items-center gap-1.5">
+    <div className="my-2 flex w-full flex-col items-center gap-1.5">
       <div className="font-script text-[10px] italic tracking-wider text-ink-faded/60">
         · 여기서 {active.length}갈래 — 탭해서 바꿀 수 있음 ·
       </div>
-      <div className="flex flex-wrap justify-center gap-1.5">
+      <div
+        className="grid w-full gap-1 sm:gap-1.5"
+        style={{
+          gridTemplateColumns: `repeat(${active.length}, minmax(0, 1fr))`,
+        }}
+      >
         {active.map((child) => {
           const isSelected = child.id === selectedChildId;
           const isAI = child.authorType === "ai";
@@ -50,7 +55,7 @@ export function BranchPills({
               onClick={() => onChoose(child.id)}
               title={child.text}
               className={[
-                "relative max-w-[180px] rounded-xl border px-2.5 py-1.5 text-left transition",
+                "relative min-w-0 rounded-xl border px-2 py-1.5 text-left transition",
                 isSelected
                   ? isAI
                     ? "border-champagne bg-champagne-light/70 shadow-sm"
@@ -61,14 +66,14 @@ export function BranchPills({
               ].join(" ")}
             >
               <div
-                className={`line-clamp-2 text-[11px] leading-snug ${
+                className={`truncate text-[10px] leading-snug sm:text-[11px] ${
                   isSelected ? "text-ink" : "text-ink-faded"
                 }`}
               >
                 {child.text}
               </div>
               <div
-                className={`mt-0.5 flex items-center gap-1 text-[9px] italic ${
+                className={`truncate text-[9px] italic ${
                   isSelected ? "text-ink-faded" : "text-ink-faded/70"
                 }`}
               >
@@ -79,8 +84,8 @@ export function BranchPills({
                 >
                   {isAI ? aiLabel(child.archetype) : child.author}
                 </span>
-                <span>· {size}토막</span>
-                {isSelected && <span>· 지금</span>}
+                <span> · {size}</span>
+                {isSelected && <span> · ★</span>}
               </div>
             </button>
           );

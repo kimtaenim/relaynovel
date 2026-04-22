@@ -11,7 +11,7 @@ import {
 import { NodeCard } from "./NodeCard";
 import { InkLine } from "./Connector";
 import { BranchPills } from "./BranchPills";
-import { SiblingCarousel } from "./SiblingCarousel";
+import { CardCarousel } from "./CardCarousel";
 import { ChatInput } from "./ChatInput";
 import { ParchmentCorners } from "./ParchmentDecor";
 import { ArchetypeBar } from "./ArchetypeBar";
@@ -229,10 +229,84 @@ export function BookReader({
               (cid) => book.nodes[cid]?.status === "active",
             ).length;
 
+            // 형제들(부모의 모든 active 자식) — 이 카드 레벨에서 캐러셀로 표시
+            const parent = idx > 0 ? path[idx - 1] : null;
+            const siblingNodes = parent
+              ? parent.childrenIds
+                  .map((cid) => book.nodes[cid])
+                  .filter(
+                    (n): n is typeof node => !!n && n.status === "active",
+                  )
+              : [];
+            const hasSiblings = siblingNodes.length > 1;
+
+            // 노드 하나를 NodeCard로 렌더 (액티브 슬라이드에만 액션 버튼 붙임)
+            const renderSlide = (sibNode: typeof node, isActive: boolean) => {
+              const sibIsAuthor = sibNode.author === currentUser;
+              const sibIsInvoker =
+                !!sibNode.adoptedBy && sibNode.adoptedBy === currentUser;
+              const sibHasChildren = sibNode.childrenIds.some(
+                (cid) => book.nodes[cid]?.status === "active",
+              );
+              const sibCanDelete =
+                !!sibNode.parentId &&
+                !sibHasChildren &&
+                (sibIsAuthor || sibIsInvoker);
+              return (
+                <NodeCard
+                  node={sibNode}
+                  isRoot={isRoot && isActive}
+                  onClick={
+                    !isActive
+                      ? () => {
+                          setBranchOpen(null);
+                          setLeaf(sibNode.id);
+                        }
+                      : !isLeaf && !isBranchInputOpen
+                        ? () => {
+                            setBranchOpen(null);
+                            setLeaf(sibNode.id);
+                          }
+                        : undefined
+                  }
+                  onStartChild={
+                    !isActive || sibNode.isEnding
+                      ? undefined
+                      : () =>
+                          setBranchOpen((prev) =>
+                            prev?.nodeId === sibNode.id &&
+                            prev.direction === "child"
+                              ? null
+                              : { nodeId: sibNode.id, direction: "child" },
+                          )
+                  }
+                  onStartSibling={
+                    !isActive || sibNode.isEnding || !sibNode.parentId
+                      ? undefined
+                      : () =>
+                          setBranchOpen((prev) =>
+                            prev?.nodeId === sibNode.id &&
+                            prev.direction === "sibling"
+                              ? null
+                              : { nodeId: sibNode.id, direction: "sibling" },
+                          )
+                  }
+                  canSibling={!!sibNode.parentId}
+                  canDelete={isActive && sibCanDelete}
+                  onDelete={
+                    isActive && sibCanDelete
+                      ? () => deleteNode(sibNode.id)
+                      : undefined
+                  }
+                  openDirection={isActive ? openDirection : null}
+                />
+              );
+            };
+
             return (
               <div key={node.id} className="w-full">
                 {openDirection === "sibling" ? (
-                  // 형제로 쓰는 중: 현재 카드는 작게 미리보기, 같은 레벨에서 새 카드 쓰는 느낌
+                  // → 눌러서 형제로 쓰는 중: 현재 카드 peek + 같은 레벨 입력창
                   <div className="mb-2 flex flex-col items-center gap-2">
                     <div className="w-full max-w-[260px] scale-95 opacity-80">
                       <NodeCard node={node} variant="peek" />
@@ -255,60 +329,20 @@ export function BookReader({
                       />
                     </div>
                   </div>
+                ) : hasSiblings ? (
+                  // 형제가 여럿이면 이 레벨 전체가 캐러셀
+                  <CardCarousel
+                    slides={siblingNodes.map((sib) => ({
+                      id: sib.id,
+                      node: renderSlide(sib, sib.id === node.id),
+                    }))}
+                    activeIndex={siblingNodes.findIndex(
+                      (s) => s.id === node.id,
+                    )}
+                  />
                 ) : (
-                  <NodeCard
-                    node={node}
-                    isRoot={isRoot}
-                    onClick={
-                      !isLeaf && !isBranchInputOpen
-                        ? () => {
-                            setBranchOpen(null);
-                            setLeaf(node.id);
-                          }
-                        : undefined
-                    }
-                    onStartChild={
-                      node.isEnding
-                        ? undefined
-                        : () =>
-                            setBranchOpen((prev) =>
-                              prev?.nodeId === node.id &&
-                              prev.direction === "child"
-                                ? null
-                                : { nodeId: node.id, direction: "child" },
-                            )
-                    }
-                    onStartSibling={
-                      node.isEnding || !node.parentId
-                        ? undefined
-                        : () =>
-                            setBranchOpen((prev) =>
-                              prev?.nodeId === node.id &&
-                              prev.direction === "sibling"
-                                ? null
-                                : { nodeId: node.id, direction: "sibling" },
-                            )
-                    }
-                    canSibling={!!node.parentId}
-                    canDelete={canDelete}
-                    onDelete={
-                      canDelete ? () => deleteNode(node.id) : undefined
-                    }
-                    openDirection={openDirection}
-                  />
-                )}
-
-                {/* 이 카드의 형제 캐러셀 — 부모의 다른 자식들 */}
-                {idx > 0 && openDirection !== "sibling" && (
-                  <SiblingCarousel
-                    book={book}
-                    parentNode={path[idx - 1]}
-                    selectedChildId={node.id}
-                    onChoose={(id) => {
-                      setBranchOpen(null);
-                      setLeaf(id);
-                    }}
-                  />
+                  // 형제 없음 (루트 또는 외동): 단일 카드
+                  renderSlide(node, true)
                 )}
 
                 {/* 자식(↓) 방향 입력창 — 현재 카드 아래에 잉크 선 + 입력 */}
