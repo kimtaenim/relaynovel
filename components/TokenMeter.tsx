@@ -14,11 +14,14 @@ function fmtK(n: number): string {
   return n.toString();
 }
 
-function fmtCost(n: number): string {
-  if (n === 0) return "$0";
-  if (n < 0.0001) return "<$0.0001";
-  if (n < 1) return "$" + n.toFixed(4);
-  return "$" + n.toFixed(2);
+// USD → KRW 대략 환율 (2026 기준, 필요시 조정)
+const USD_TO_KRW = 1400;
+
+function fmtCost(usd: number): string {
+  const krw = usd * USD_TO_KRW;
+  if (krw === 0) return "₩0";
+  if (krw < 1) return "<₩1";
+  return "₩" + Math.round(krw).toLocaleString("ko-KR");
 }
 
 export function TokenMeter() {
