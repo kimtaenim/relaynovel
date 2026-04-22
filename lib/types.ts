@@ -1,14 +1,11 @@
 // 전박사의 릴레이노블 — 타입 정의
 
+// 서사 이동(move) 키. "archetype" 이라는 필드명은 기존 DB 호환을 위해 유지.
 export type ArchetypeKey =
-  | "HERO"
-  | "MENTOR"
-  | "THRESHOLD_GUARDIAN"
-  | "HERALD"
-  | "SHAPESHIFTER"
-  | "SHADOW"
-  | "ALLY"
-  | "TRICKSTER";
+  | "CONTINUE"
+  | "TWIST"
+  | "SURPRISE"
+  | "OTHER_CHARACTER";
 
 export type BookMode = "simple" | "complex" | "trpg" | "free";
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Node } from "@/lib/types";
+import { ARCHETYPES } from "@/lib/archetypes";
 
 export function NodeCard({
   node,
@@ -171,13 +172,19 @@ function AuthorBadge({
 }) {
   const size = small ? "text-[9px]" : "text-[11px]";
   if (authorType === "ai") {
+    const meta = archetype
+      ? (ARCHETYPES as Record<string, { koreanLabel: string; glyph: string }>)[
+          archetype
+        ]
+      : undefined;
+    const label = meta ? meta.koreanLabel : archetype ?? "AI";
     return (
       <span
         className={`inline-flex items-center gap-1 rounded-full border border-champagne/60 bg-champagne-light/40 px-2 py-0.5 ${size}`}
       >
         <AlchemyGlyph />
         <span className="font-script not-italic tracking-wider text-ink-faded">
-          AI · @{archetype ?? "??"}
+          AI · {label}
         </span>
         {adoptedBy && !small && (
           <span className="text-ink-faded/70">· 호출 {adoptedBy}</span>

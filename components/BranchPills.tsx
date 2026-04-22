@@ -2,6 +2,7 @@
 
 import type { Book, Node } from "@/lib/types";
 import { countDescendants } from "@/lib/tree";
+import { ARCHETYPES } from "@/lib/archetypes";
 
 // 분기점에서 N개 자식을 작은 박스로 나란히 표시.
 // 선택된 것은 밝게 강조, 선택 안 된 것들은 흐리게.
@@ -23,6 +24,14 @@ export function BranchPills({
     .filter((c): c is Node => !!c && c.status === "active");
 
   if (active.length <= 1) return null;
+
+  function aiLabel(key?: string): string {
+    if (!key) return "AI";
+    const meta = (
+      ARCHETYPES as Record<string, { koreanLabel: string }>
+    )[key];
+    return meta ? meta.koreanLabel : key;
+  }
 
   return (
     <div className="my-2 flex flex-col items-center gap-1.5">
@@ -68,7 +77,7 @@ export function BranchPills({
                     isAI ? "text-champagne-dark" : "text-seal/80"
                   }`}
                 >
-                  {isAI ? `@${child.archetype}` : child.author}
+                  {isAI ? aiLabel(child.archetype) : child.author}
                 </span>
                 <span>· {size}토막</span>
                 {isSelected && <span>· 지금</span>}

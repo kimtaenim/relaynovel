@@ -28,9 +28,8 @@ export function AIBubblePanel({
         <span className="flex items-center gap-2">
           <span className="text-base">{a.glyph}</span>
           <span className="not-italic tracking-wider">
-            @{a.key} · {a.koreanLabel}
+            {a.koreanLabel} · 세 갈래 제안
           </span>
-          <span>— 세 갈래 제안</span>
         </span>
         <button
           type="button"
@@ -73,14 +72,12 @@ function Bubble({
   onAdopt: () => void;
   disabled: boolean;
 }) {
-  const toneLabel = ["· 안전한 제안", "· 과감한 제안", "· 예상 밖의 제안"][
-    index
-  ] ?? "";
+  const label = `${index + 1}안`;
   return (
     <div className="relative rounded-2xl border border-leather/40 bg-parchment-light/95 px-4 py-3 shadow-sm">
       <p className="handwritten text-base leading-loose sm:text-lg">{text}</p>
       <div className="mt-2 flex items-center justify-between gap-2 font-script text-[11px] italic text-ink-faded/80">
-        <span>{toneLabel}</span>
+        <span>· {label}</span>
         <button
           type="button"
           onClick={onAdopt}
