@@ -422,77 +422,136 @@ export function BookReader({
         </div>
       </article>
 
-      {/* 바닥 고정 영역 — 항상 렌더 (모아 읽기 + 정보 + 조건부 쓰기 영역) */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-leather/40 bg-mahogany/92 px-3 pb-[env(safe-area-inset-bottom,0.5rem)] pt-2 backdrop-blur-sm sm:px-4 sm:pt-3">
-        <div className="mx-auto flex max-w-3xl flex-col gap-2">
-          {/* 언제나 보이는 상단 유틸리티 바 */}
-          <div className="flex items-center justify-center gap-2">
-            <a
-              href={`/book/${book.id}/read${
-                leafQuery ? `?leaf=${resolvedLeafId}` : ""
-              }`}
-              className="rounded-full bg-parchment-light/90 px-3 py-1 font-script text-[11px] not-italic tracking-wider text-ink shadow-inner hover:bg-parchment-light"
-            >
-              📖 이 갈래 모아 읽기
-            </a>
-            <a
-              href="/about"
-              title="이 프로젝트 소개"
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-champagne/50 bg-champagne-dark/40 font-display text-[11px] text-parchment-light hover:bg-champagne-dark/70"
-            >
-              i
-            </a>
-          </div>
+      {/* 플로팅 유틸 버튼 (바 위에 떠있음) — 모아 읽기 + 정보 */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[88px] z-30 flex justify-end px-3 sm:bottom-[96px] sm:px-4">
+        <div className="pointer-events-auto flex items-center gap-2">
+          <a
+            href={`/book/${book.id}/read${
+              leafQuery ? `?leaf=${resolvedLeafId}` : ""
+            }`}
+            title="이 갈래 전체를 연속으로 읽기"
+            className="flex h-9 items-center gap-1 rounded-full border border-champagne/60 bg-mahogany-dark/90 px-3 font-script text-[11px] not-italic tracking-wider text-parchment-light shadow-lg backdrop-blur hover:bg-mahogany-dark"
+          >
+            <span>📖</span>
+            <span>모아 읽기</span>
+          </a>
+          <a
+            href="/about"
+            title="이 프로젝트 소개"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-champagne/60 bg-mahogany-dark/90 font-display text-sm text-parchment-light shadow-lg backdrop-blur hover:bg-mahogany-dark"
+          >
+            i
+          </a>
+        </div>
+      </div>
 
-          {/* 쓰기 영역 — 조건부 */}
-          {!leafNode?.isEnding && !branchOpen && !aiPanel && (
-            <>
+      {/* 바닥 고정 영역 — 쓰기 조건일 때 4버튼 한 행 */}
+      {!leafNode?.isEnding && !branchOpen && !aiPanel && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-leather/40 bg-mahogany/92 px-3 pb-[env(safe-area-inset-bottom,0.5rem)] pt-2 backdrop-blur-sm sm:px-4 sm:pt-3">
+          <div className="mx-auto max-w-3xl">
+            {aiError && (
+              <p className="mb-1 text-center font-script text-[10px] italic text-seal/80">
+                {aiError}
+              </p>
+            )}
             <ArchetypeBar
               enabled={book.archetypesEnabled}
               onInvoke={(k) => invokeArchetype(k, resolvedLeafId)}
               busy={aiBusy}
               busyKey={aiBusyKey}
-            />
-            {aiError && (
-              <p className="font-script text-[10px] italic text-seal/80">
-                {aiError}
-              </p>
-            )}
-            <div className="flex items-center gap-2 pb-1">
-              <span className="font-script text-[10px] italic text-parchment-light/60">
-                직접 쓰기:
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  setBranchOpen({
-                    nodeId: resolvedLeafId,
-                    direction: "child",
-                  })
-                }
-                className="flex-1 rounded-full border border-seal/50 bg-seal/20 px-3 py-2 font-display text-xs tracking-wider text-parchment-light shadow-sm hover:bg-seal/40"
-              >
-                ↓ 이 뒤에 잇기
-              </button>
-              {leafNode?.parentId && (
-                <button
-                  type="button"
-                  onClick={() =>
+              trailing={
+                <WriteButton
+                  canSibling={!!leafNode?.parentId}
+                  onChild={() =>
+                    setBranchOpen({
+                      nodeId: resolvedLeafId,
+                      direction: "child",
+                    })
+                  }
+                  onSibling={() =>
                     setBranchOpen({
                       nodeId: resolvedLeafId,
                       direction: "sibling",
                     })
                   }
-                  className="flex-1 rounded-full border border-verdigris/50 bg-verdigris/15 px-3 py-2 font-display text-xs tracking-wider text-parchment-light shadow-sm hover:bg-verdigris/30"
-                >
-                  → 옆에 새 갈래
-                </button>
-              )}
-            </div>
-            </>
+                />
+              }
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 사람이 직접 쓰기 버튼 — 누르면 위로 팝오버(↓ 뒤에 / → 옆에) 펼쳐짐
+function WriteButton({
+  canSibling,
+  onChild,
+  onSibling,
+}: {
+  canSibling: boolean;
+  onChild: () => void;
+  onSibling: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className={`flex min-h-[44px] w-full flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1.5 transition ${
+          open
+            ? "border-seal bg-seal/25 text-parchment-light"
+            : "border-seal/60 bg-seal/15 text-parchment-light hover:border-seal hover:bg-seal/30"
+        }`}
+      >
+        <span className="text-base leading-none">✎</span>
+        <span className="font-script text-[11px] not-italic leading-tight tracking-wider">
+          내가 쓰기
+        </span>
+      </button>
+
+      {open && (
+        <div
+          className="absolute bottom-full right-0 mb-2 flex w-[200px] flex-col gap-1 rounded-2xl border border-leather/60 bg-mahogany-dark/95 p-2 shadow-xl backdrop-blur"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onChild();
+            }}
+            className="rounded-xl border border-seal/50 bg-seal/20 px-3 py-2 font-display text-xs tracking-wider text-parchment-light hover:bg-seal/40"
+          >
+            ↓ 뒤에 잇기
+          </button>
+          {canSibling && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSibling();
+              }}
+              className="rounded-xl border border-verdigris/50 bg-verdigris/20 px-3 py-2 font-display text-xs tracking-wider text-parchment-light hover:bg-verdigris/40"
+            >
+              → 옆에 새 갈래
+            </button>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

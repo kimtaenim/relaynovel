@@ -129,11 +129,11 @@ export const ARCHETYPES: Record<ArchetypeKey, Archetype> = {
   },
 };
 
+// UI에 노출되는 순서. OTHER_CHARACTER는 정의는 남기되 메뉴에서는 제외.
 export const ARCHETYPE_ORDER: ArchetypeKey[] = [
   "CONTINUE",
   "TWIST",
   "SURPRISE",
-  "OTHER_CHARACTER",
 ];
 
 export function buildArchetypeSystemPrompt(key: ArchetypeKey): string {
