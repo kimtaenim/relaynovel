@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply h-full;
+    background: #2E1B10;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply font-serif text-ink;
+  }
+  /* iOS Safari가 input focus 시 자동 확대하지 않게 */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  /* 양피지 질감 배경 */
+  .parchment {
+    background-color: #F4E8D0;
+    background-image:
+      radial-gradient(ellipse at 20% 30%, rgba(139, 90, 43, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, rgba(139, 90, 43, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 20%, rgba(90, 70, 56, 0.05) 0%, transparent 40%),
+      linear-gradient(180deg, #F4E8D0 0%, #E8D5A8 100%);
+    box-shadow:
+      inset 0 0 40px rgba(120, 85, 50, 0.2),
+      inset 0 0 120px rgba(120, 85, 50, 0.1);
+  }
+  .parchment-torn {
+    mask-image:
+      radial-gradient(ellipse at 50% 50%, black 70%, transparent 98%);
+  }
+
+  /* 마호가니 목재 캐비닛 배경 */
+  .mahogany-cabinet {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        #3E2615 0px,
+        #4A2C1A 2px,
+        #5C3A22 5px,
+        #4A2C1A 9px,
+        #3E2615 12px
+      ),
+      linear-gradient(180deg, #5C3A22 0%, #2E1B10 100%);
+    background-blend-mode: multiply;
+  }
+
+  /* 샴페인골드 명판 */
+  .brass-plaque {
+    background:
+      linear-gradient(
+        180deg,
+        #FAEDC6 0%,
+        #EAD49A 25%,
+        #CFB071 55%,
+        #A68B52 85%,
+        #7A6638 100%
+      );
+    box-shadow:
+      inset 0 2px 3px rgba(255, 248, 220, 0.75),
+      inset 0 -2px 3px rgba(60, 45, 20, 0.35),
+      inset 0 0 0 1px rgba(200, 170, 110, 0.5),
+      0 4px 14px rgba(0, 0, 0, 0.55);
+    color: #2E1B10;
+    text-shadow: 0 1px 0 rgba(255, 248, 220, 0.6);
+  }
+  /* 샴페인골드 나사못 색상 */
+  .brass-plaque .screw {
+    background: radial-gradient(
+      circle at 30% 30%,
+      #FAEDC6 0%,
+      #CFB071 55%,
+      #7A6638 100%
+    );
+  }
+
+  /* 책 유리 프레임 */
+  .glass-shelf {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0) 10%,
+      rgba(255, 255, 255, 0) 90%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 240, 200, 0.15),
+      0 2px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  /* 가죽 표지 */
+  .leather {
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(156, 110, 68, 0.5) 0%, transparent 70%),
+      radial-gradient(ellipse at 70% 80%, rgba(46, 27, 16, 0.3) 0%, transparent 60%),
+      linear-gradient(135deg, #7A5230 0%, #5C3E24 100%);
+  }
+  .leather-red {
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(180, 60, 50, 0.4) 0%, transparent 70%),
+      linear-gradient(135deg, #6B2015 0%, #3E1008 100%);
+  }
+  .leather-green {
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(100, 120, 80, 0.4) 0%, transparent 70%),
+      linear-gradient(135deg, #3E4A2A 0%, #222815 100%);
+  }
+  .leather-blue {
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(80, 100, 130, 0.4) 0%, transparent 70%),
+      linear-gradient(135deg, #2A3A52 0%, #131A2C 100%);
+  }
+
+  /* 봉랍 */
+  .wax-seal {
+    background: radial-gradient(circle at 35% 35%, #C83030 0%, #8B0000 60%, #5A0000 100%);
+    box-shadow:
+      inset 1px 1px 3px rgba(255, 150, 150, 0.4),
+      inset -1px -1px 3px rgba(0, 0, 0, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  /* 잉크 텍스트 버튼 */
+  .ink-button {
+    @apply text-ink-faded italic hover:text-ink transition-colors;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 4px;
+  }
+
+  /* 필사체 텍스트 */
+  .handwritten {
+    @apply font-serif text-ink leading-relaxed;
+    letter-spacing: 0.01em;
+  }
+}
+
+@layer utilities {
+  .text-shadow-emboss {
+    text-shadow:
+      0 1px 0 rgba(255, 230, 140, 0.4),
+      0 -1px 0 rgba(0, 0, 0, 0.3);
+  }
+  .text-shadow-ink-soft {
+    text-shadow: 0 0 1px rgba(43, 24, 16, 0.3);
+  }
+}
+
+/* 카드 부유 애니메이션 — 각 카드마다 약간 다른 주기/딜레이로 비동기 움직임 */
+@keyframes cardDriftA {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25%      { transform: translate3d(2px, -3px, 0) rotate(0.4deg); }
+  50%      { transform: translate3d(-1px, 2px, 0) rotate(-0.3deg); }
+  75%      { transform: translate3d(3px, 1px, 0) rotate(0.2deg); }
+}
+@keyframes cardDriftB {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  30%      { transform: translate3d(-2px, 2px, 0) rotate(-0.35deg); }
+  60%      { transform: translate3d(1px, -2px, 0) rotate(0.25deg); }
+  80%      { transform: translate3d(-2px, 1px, 0) rotate(-0.15deg); }
+}
+@keyframes cardDriftC {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  20%      { transform: translate3d(1px, -2px, 0) rotate(0.2deg); }
+  55%      { transform: translate3d(-3px, 1px, 0) rotate(-0.4deg); }
+  85%      { transform: translate3d(2px, 2px, 0) rotate(0.3deg); }
+}
+.card-drift-a { animation: cardDriftA 7s ease-in-out infinite; will-change: transform; }
+.card-drift-b { animation: cardDriftB 9s ease-in-out infinite; will-change: transform; }
+.card-drift-c { animation: cardDriftC 11s ease-in-out infinite; will-change: transform; }
+
+/* 연결 잉크선 — 미세하게 흐르는 듯 */
+@keyframes inkFlow {
+  0%, 100% { stroke-dashoffset: 0; opacity: 0.55; }
+  50%      { stroke-dashoffset: 6; opacity: 0.7; }
+}
+.ink-thread {
+  stroke-dasharray: 1 4;
+  animation: inkFlow 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-drift-a, .card-drift-b, .card-drift-c, .ink-thread {
+    animation: none;
+  }
+}

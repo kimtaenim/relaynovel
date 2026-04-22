@@ -1,0 +1,295 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import type { Book } from "@/lib/types";
+import {
+  getDeepestLeaf,
+  getPath,
+  selectedChildOf,
+} from "@/lib/tree";
+import { NodeCard } from "./NodeCard";
+import { InkLine } from "./Connector";
+import { BranchPills } from "./BranchPills";
+import { ChatInput } from "./ChatInput";
+import { ParchmentCorners } from "./ParchmentDecor";
+import { ArchetypeBar } from "./ArchetypeBar";
+import { AIBubblePanel, type AIProposalView } from "./AIBubble";
+import type { ArchetypeKey } from "@/lib/types";
+
+export function BookReader({
+  book,
+  currentUser,
+}: {
+  book: Book;
+  currentUser: string;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const leafQuery = searchParams.get("leaf") ?? searchParams.get("focus");
+
+  const resolvedLeafId = useMemo(() => {
+    if (leafQuery && book.nodes[leafQuery]?.status === "active") {
+      return leafQuery;
+    }
+    return getDeepestLeaf(book, book.rootNodeId);
+  }, [book, leafQuery]);
+
+  const path = useMemo(
+    () => getPath(book, resolvedLeafId),
+    [book, resolvedLeafId],
+  );
+
+  const [branchOpenAt, setBranchOpenAt] = useState<string | null>(null);
+
+  // AI 호출 상태
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiBusyKey, setAiBusyKey] = useState<ArchetypeKey | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiPanel, setAiPanel] = useState<{
+    archetype: ArchetypeKey;
+    parentId: string;
+    proposals: AIProposalView[];
+  } | null>(null);
+
+  async function invokeArchetype(archetype: ArchetypeKey, parentId: string) {
+    setAiBusy(true);
+    setAiBusyKey(archetype);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/ai/invoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookId: book.id, parentId, archetype }),
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error ?? "AI 호출 실패");
+      }
+      const data = (await res.json()) as {
+        proposals: AIProposalView[];
+        archetype: ArchetypeKey;
+      };
+      setAiPanel({ archetype: data.archetype, parentId, proposals: data.proposals });
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "AI 호출 실패");
+    } finally {
+      setAiBusy(false);
+      setAiBusyKey(null);
+    }
+  }
+
+  async function adoptProposal(proposalId: string) {
+    if (!aiPanel) return;
+    setAiBusy(true);
+    try {
+      const res = await fetch(`/api/nodes/${proposalId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookId: book.id, status: "active" }),
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error ?? "채택 실패");
+      }
+      // 채택된 노드를 리프로 이동
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("leaf", proposalId);
+      params.delete("focus");
+      router.replace(`?${params.toString()}`, { scroll: false });
+      setAiPanel(null);
+      router.refresh();
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "채택 실패");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  const setLeaf = useCallback(
+    (nodeId: string) => {
+      const deep = getDeepestLeaf(book, nodeId);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("leaf", deep);
+      params.delete("focus");
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [book, router, searchParams],
+  );
+
+  async function submitNode(parentId: string, text: string) {
+    const res = await fetch("/api/nodes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookId: book.id, parentId, text }),
+    });
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      throw new Error(b.error ?? "전송 실패");
+    }
+    const data = (await res.json()) as { nodeId: string };
+    setBranchOpenAt(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("leaf", data.nodeId);
+    params.delete("focus");
+    router.replace(`?${params.toString()}`, { scroll: false });
+    router.refresh();
+  }
+
+  const totalActive = Object.values(book.nodes).filter(
+    (n) => n.status === "active",
+  ).length;
+  const totalInPath = path.length;
+  const leafNode = path[path.length - 1];
+
+  return (
+    <div className="relative">
+      {/* 경로 인디케이터 */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-script text-xs italic text-parchment-light/70">
+        <span>
+          이 갈래 {totalInPath}토막 · 전체 {totalActive}토막
+        </span>
+        {leafQuery && (
+          <button
+            type="button"
+            className="text-parchment-light/80 underline decoration-dotted underline-offset-4 hover:text-parchment-light"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("leaf");
+              params.delete("focus");
+              router.replace(
+                params.toString() ? `?${params.toString()}` : "?",
+                { scroll: false },
+              );
+            }}
+          >
+            기본 갈래로
+          </button>
+        )}
+      </div>
+
+      <article className="parchment relative overflow-hidden rounded-3xl p-3 pb-32 shadow-parchment sm:p-6 sm:pb-32 md:p-10 md:pb-40">
+        <ParchmentCorners />
+        <div className="relative z-10 flex flex-col items-center">
+          {path.map((node, idx) => {
+            const isRoot = idx === 0;
+            const isLeaf = idx === path.length - 1;
+            const isBranchInputOpen = branchOpenAt === node.id;
+            const selectedChildId = selectedChildOf(
+              book,
+              node.id,
+              resolvedLeafId,
+            );
+            const activeChildCount = node.childrenIds.filter(
+              (cid) => book.nodes[cid]?.status === "active",
+            ).length;
+
+            return (
+              <div key={node.id} className="w-full">
+                <NodeCard
+                  node={node}
+                  isRoot={isRoot}
+                  onClick={
+                    !isLeaf
+                      ? () => {
+                          setBranchOpenAt(null);
+                          setLeaf(node.id);
+                        }
+                      : undefined
+                  }
+                  onStartBranch={
+                    node.isEnding
+                      ? undefined
+                      : () =>
+                          setBranchOpenAt((prev) =>
+                            prev === node.id ? null : node.id,
+                          )
+                  }
+                  branchInputOpen={isBranchInputOpen}
+                />
+
+                {/* 인라인 이어쓰기 */}
+                {isBranchInputOpen && (
+                  <div className="my-3">
+                    <InkLine active />
+                    <ChatInput
+                      label={`${currentUser} · 여기서 이어쓰기`}
+                      autoFocus
+                      compact
+                      onSubmit={(text) => submitNode(node.id, text)}
+                      onCancel={() => setBranchOpenAt(null)}
+                    />
+                  </div>
+                )}
+
+                {/* 다음 노드로 연결 */}
+                {!isLeaf && !isBranchInputOpen && (
+                  <>
+                    <InkLine active />
+                    <BranchPills
+                      book={book}
+                      branchNode={node}
+                      selectedChildId={selectedChildId}
+                      onChoose={(id) => {
+                        setBranchOpenAt(null);
+                        setLeaf(id);
+                      }}
+                    />
+                    {activeChildCount >= 2 && <InkLine active />}
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+          {/* AI 제안 패널 — 리프에서 호출되면 여기 렌더 */}
+          {aiPanel && aiPanel.parentId === leafNode?.id && (
+            <AIBubblePanel
+              archetype={aiPanel.archetype}
+              proposals={aiPanel.proposals}
+              onAdopt={adoptProposal}
+              onDismiss={() => setAiPanel(null)}
+              busy={aiBusy}
+            />
+          )}
+
+          {/* 리프 안내 */}
+          {!aiPanel && (
+            <div className="mt-6 text-center font-script text-xs italic text-ink-faded/70">
+              {leafNode?.isEnding
+                ? "— 이 갈래는 여기서 종결 —"
+                : totalInPath === 1
+                  ? "— 아래 입력창으로 이어 쓰세요 —"
+                  : "— 갈래의 끝 —"}
+            </div>
+          )}
+        </div>
+      </article>
+
+      {/* 바닥 고정 입력창 + 아르케타입 바 */}
+      {!leafNode?.isEnding && !branchOpenAt && !aiPanel && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-leather/40 bg-mahogany/92 px-3 pb-[env(safe-area-inset-bottom,0.5rem)] pt-2 backdrop-blur-sm sm:px-4 sm:pt-3">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-2">
+              <ArchetypeBar
+                enabled={book.archetypesEnabled}
+                onInvoke={(k) => invokeArchetype(k, resolvedLeafId)}
+                busy={aiBusy}
+                busyKey={aiBusyKey}
+              />
+            </div>
+            {aiError && (
+              <p className="mb-1 font-script text-[10px] italic text-seal/80">
+                {aiError}
+              </p>
+            )}
+            <ChatInput
+              label={`${currentUser} · Enter로 보내기`}
+              onSubmit={(text) => submitNode(resolvedLeafId, text)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
