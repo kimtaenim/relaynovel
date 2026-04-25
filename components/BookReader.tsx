@@ -358,6 +358,10 @@ export function BookReader({
                     activeIndex={siblingNodes.findIndex(
                       (s) => s.id === node.id,
                     )}
+                    onActiveSlideChange={(id) => {
+                      setBranchOpen(null);
+                      setLeaf(id);
+                    }}
                   />
                 ) : (
                   // 형제 없음 (루트 또는 외동): 단일 카드

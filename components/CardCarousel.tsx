@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // 같은 레벨 형제들 슬라이드 캐러셀.
-// 터치 스와이프는 native overflow-x, 마우스는 click-and-drag 수동 구현.
+// - 터치 스와이프: native overflow-x
+// - 마우스: pointer drag
+// - 스와이프/스크롤이 멈췄을 때 중앙에 온 슬라이드를 자동 선택 (탭 불필요)
 export function CardCarousel({
   slides,
   activeIndex,
+  onActiveSlideChange,
 }: {
   slides: Array<{ id: string; node: React.ReactNode }>;
   activeIndex: number;
+  onActiveSlideChange?: (id: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -21,6 +25,9 @@ export function CardCarousel({
   const draggedDistance = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
 
+  // 자체적으로 잠시 활성 인덱스를 누른 채로 (URL 갱신 전 시각 응답)
+  const programmaticScroll = useRef(false);
+
   // 활성 슬라이드를 가로 중앙으로 정렬
   useEffect(() => {
     const target = slideRefs.current[activeIndex];
@@ -29,22 +36,70 @@ export function CardCarousel({
     const left =
       target.offsetLeft -
       (container.clientWidth - target.clientWidth) / 2;
+    programmaticScroll.current = true;
     container.scrollTo({ left, behavior: "smooth" });
+    // 600ms 뒤 프로그래매틱 스크롤 끝났다고 가정 (스무스 스크롤 평균치)
+    const t = window.setTimeout(() => {
+      programmaticScroll.current = false;
+    }, 600);
+    return () => window.clearTimeout(t);
   }, [activeIndex]);
 
+  // 스크롤이 멈췄을 때 중앙에 온 슬라이드를 활성으로 알림
+  const detectCenteredSlide = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container || programmaticScroll.current) return;
+    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < slides.length; i++) {
+      const el = slideRefs.current[i];
+      if (!el) continue;
+      const slideCenter = el.offsetLeft + el.clientWidth / 2;
+      const dist = Math.abs(containerCenter - slideCenter);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === -1) return;
+    if (bestIdx !== activeIndex && onActiveSlideChange) {
+      onActiveSlideChange(slides[bestIdx].id);
+    }
+  }, [slides, activeIndex, onActiveSlideChange]);
+
+  // 스크롤 이벤트로 정착 감지 (debounce + scrollend 폴백)
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(detectCenteredSlide, 180);
+    };
+    const onScrollEnd = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      detectCenteredSlide();
+    };
+    container.addEventListener("scroll", onScroll, { passive: true });
+    // scrollend는 최신 브라우저 지원
+    container.addEventListener("scrollend", onScrollEnd);
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      container.removeEventListener("scrollend", onScrollEnd);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [detectCenteredSlide]);
+
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // 마우스만 — 터치는 native overflow가 더 자연스러움
     if (e.pointerType !== "mouse") return;
-    // 버튼/텍스트영역/링크에서 시작한 드래그는 무시
     const target = e.target as HTMLElement;
     if (target.closest("button, a, textarea, input")) return;
-
     dragging.current = true;
     dragStartX.current = e.clientX;
     dragStartScrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
     draggedDistance.current = 0;
     setIsDragging(true);
-    // pointer capture로 바깥으로 나가도 이벤트 계속 받음
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
@@ -70,10 +125,9 @@ export function CardCarousel({
     } catch {
       /* ignore */
     }
-    // scroll-snap이 알아서 가장 가까운 슬라이드로 붙여줌
+    // scroll-snap이 정착시키고, 그 후 detectCenteredSlide가 활성 변경 알림
   }
 
-  // 드래그 직후에 발생한 click은 의도치 않은 슬라이드 활성화를 유발하므로 차단
   function onClickCapture(e: React.MouseEvent<HTMLDivElement>) {
     if (draggedDistance.current > 5) {
       e.preventDefault();
